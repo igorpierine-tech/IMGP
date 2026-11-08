@@ -1,6 +1,8 @@
 import { getDb } from "../../db";
 import { auditEvents } from "../../db/schema";
 import type { CurrentUser } from "./authz";
+import type { DrizzleD1Database } from "drizzle-orm/d1";
+import type * as schema from "../../db/schema";
 
 type AuditInput = {
   actor: CurrentUser;
@@ -11,6 +13,7 @@ type AuditInput = {
   before?: unknown;
   after?: unknown;
   metadata?: unknown;
+  db?: DrizzleD1Database<typeof schema>;
 };
 
 function serialize(value: unknown) {
@@ -18,7 +21,12 @@ function serialize(value: unknown) {
 }
 
 export async function writeAudit(input: AuditInput) {
-  await getDb().insert(auditEvents).values({
+  const db = input.db ?? getDb();
+  const meta = input.actor.tenantId
+    ? { ...(typeof input.metadata === "object" && input.metadata ? input.metadata : {}), tenantId: input.actor.tenantId }
+    : input.metadata;
+
+  await db.insert(auditEvents).values({
     actorUserId: input.actor.id,
     actorEmail: input.actor.email,
     action: input.action,
@@ -27,6 +35,6 @@ export async function writeAudit(input: AuditInput) {
     requestId: input.requestId ?? null,
     beforeJson: serialize(input.before),
     afterJson: serialize(input.after),
-    metadataJson: serialize(input.metadata),
+    metadataJson: serialize(meta),
   });
 }

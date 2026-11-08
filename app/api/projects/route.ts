@@ -1,14 +1,14 @@
 import { desc, eq } from "drizzle-orm";
-import { getDb } from "@/db";
 import { projects, projectTypes } from "@/db/schema";
 import { writeAudit } from "@/lib/server/audit";
-import { HttpError, requireApiUser, requireRole } from "@/lib/server/authz";
+import { HttpError } from "@/lib/server/authz";
 import { errorMessage } from "@/lib/server/errors";
+import { getApiContext, checkPermissionOrRole } from "@/lib/server/api-context";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    await requireApiUser();
-    const rows = await getDb().select().from(projects).orderBy(desc(projects.updatedAt)).limit(500);
+    const ctx = await getApiContext(request);
+    const rows = await ctx.db.select().from(projects).orderBy(desc(projects.updatedAt)).limit(500);
     return Response.json({ projects: rows });
   } catch (error) {
     return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
@@ -17,8 +17,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireApiUser();
-    requireRole(user, ["project_coordinator", "it_director", "project_analyst"]);
+    const ctx = await getApiContext(request);
+    checkPermissionOrRole(ctx, "projects:create", ["project_coordinator", "it_director", "project_analyst"]);
     const body = await request.json() as Record<string, unknown>;
     const name = typeof body.name === "string" ? body.name.trim() : "";
     const projectTypeId = Number(body.projectTypeId);
@@ -27,12 +27,12 @@ export async function POST(request: Request) {
     const approvingDirector = typeof body.approvingDirector === "string" ? body.approvingDirector.trim() : "";
     if (!name) throw new HttpError(400, "O nome do projeto é obrigatório.");
     if (!Number.isInteger(projectTypeId) || projectTypeId <= 0) throw new HttpError(400, "Selecione o tipo do projeto.");
-    const [projectType] = await getDb().select({ id: projectTypes.id, active: projectTypes.active }).from(projectTypes).where(eq(projectTypes.id, projectTypeId)).limit(1);
+    const [projectType] = await ctx.db.select({ id: projectTypes.id, active: projectTypes.active }).from(projectTypes).where(eq(projectTypes.id, projectTypeId)).limit(1);
     if (!projectType?.active) throw new HttpError(400, "O tipo de projeto selecionado não está disponível.");
     if (projectPrioritized && (!prioritizationDate || !approvingDirector)) {
       throw new HttpError(400, "Informe a data da priorização e o diretor que aprovou o projeto.");
     }
-    const [created] = await getDb().insert(projects).values({
+    const [created] = await ctx.db.insert(projects).values({
       name,
       projectTypeId,
       code: typeof body.code === "string" ? body.code.trim() : null,
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       prioritizationDate: projectPrioritized ? prioritizationDate : null,
       approvingDirector: projectPrioritized ? approvingDirector : null,
     }).returning();
-    await writeAudit({ actor: user, action: "project.created", entityType: "project", entityId: created.id, requestId: request.headers.get("cf-ray"), after: created });
+    await writeAudit({ actor: ctx.user, action: "project.created", entityType: "project", entityId: created.id, requestId: request.headers.get("cf-ray"), after: created });
     return Response.json({ project: created }, { status: 201 });
   } catch (error) {
     return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
@@ -56,18 +56,18 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const user = await requireApiUser();
-    requireRole(user, ["project_coordinator", "it_director", "project_analyst"]);
+    const ctx = await getApiContext(request);
+    checkPermissionOrRole(ctx, "projects:update", ["project_coordinator", "it_director", "project_analyst"]);
     const body = await request.json() as Record<string, unknown>;
     const id = Number(body.id), projectTypeId = Number(body.projectTypeId);
     if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, "Projeto inválido.");
     if (!Number.isInteger(projectTypeId) || projectTypeId <= 0) throw new HttpError(400, "Selecione o tipo do projeto.");
-    const [projectType] = await getDb().select({ id: projectTypes.id, active: projectTypes.active }).from(projectTypes).where(eq(projectTypes.id, projectTypeId)).limit(1);
+    const [projectType] = await ctx.db.select({ id: projectTypes.id, active: projectTypes.active }).from(projectTypes).where(eq(projectTypes.id, projectTypeId)).limit(1);
     if (!projectType?.active) throw new HttpError(400, "O tipo de projeto selecionado não está disponível.");
-    const [before] = await getDb().select().from(projects).where(eq(projects.id, id)).limit(1);
+    const [before] = await ctx.db.select().from(projects).where(eq(projects.id, id)).limit(1);
     if (!before) throw new HttpError(404, "Projeto não encontrado.");
-    const [updated] = await getDb().update(projects).set({ projectTypeId, updatedAt: new Date() }).where(eq(projects.id, id)).returning();
-    await writeAudit({ actor: user, action: "project.type_updated", entityType: "project", entityId: id, requestId: request.headers.get("cf-ray"), before, after: updated });
+    const [updated] = await ctx.db.update(projects).set({ projectTypeId, updatedAt: new Date() }).where(eq(projects.id, id)).returning();
+    await writeAudit({ actor: ctx.user, action: "project.type_updated", entityType: "project", entityId: id, requestId: request.headers.get("cf-ray"), before, after: updated });
     return Response.json({ project: updated });
   } catch (error) {
     return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });

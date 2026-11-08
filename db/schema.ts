@@ -216,6 +216,28 @@ export const approvals = sqliteTable("approvals", {
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
 }, (table) => [uniqueIndex("approvals_demand_sequence_idx").on(table.demandExternalId, table.sequence)]);
 
+export const tenantRoles = sqliteTable("tenant_roles", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  key: text("key").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  builtIn: integer("built_in", { mode: "boolean" }).notNull().default(false),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(now),
+});
+
+export const rolePermissions = sqliteTable("role_permissions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  roleId: integer("role_id").notNull().references(() => tenantRoles.id, { onDelete: "cascade" }),
+  moduleKey: text("module_key").notNull(),
+  action: text("action").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  uniqueIndex("role_permissions_unique_idx").on(table.roleId, table.moduleKey, table.action),
+  index("role_permissions_role_idx").on(table.roleId),
+]);
+
 export const auditEvents = sqliteTable("audit_events", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   occurredAt: integer("occurred_at", { mode: "timestamp_ms" }).notNull().default(now),

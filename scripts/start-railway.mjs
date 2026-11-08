@@ -24,6 +24,8 @@ const workerVariableNames = [
   "BOOTSTRAP_ADMIN_EMAIL",
   "DATA_BACKEND",
   "ENTRA_REDIRECT_URI",
+  "MASTER_BOOTSTRAP_TOKEN",
+  "MASTER_BOOTSTRAP_EMAIL",
 ];
 const workerVariableArguments = workerVariableNames.flatMap((name) => {
   const value = process.env[name];

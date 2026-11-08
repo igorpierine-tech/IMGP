@@ -1,3 +1,9 @@
+export class HttpError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+  }
+}
+
 export function errorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : "Erro inesperado";
   if (message.includes("no such table")) {

@@ -3,7 +3,10 @@ import { redirect } from "next/navigation";
 import { getEntraUser } from "./entra-auth";
 import { getPasswordUser } from "./password-auth";
 import { getDb } from "../../db";
-import { users } from "../../db/schema";
+import { users, rolePermissions, tenantRoles } from "../../db/schema";
+import { HttpError } from "./errors";
+import type { Permission, ModuleKey, Action } from "./modules";
+import type { TenantContext } from "./tenant-context";
 
 export const roles = [
   "project_coordinator",
@@ -16,11 +19,15 @@ export const roles = [
 ] as const;
 
 export type AppRole = (typeof roles)[number];
+
 export type CurrentUser = {
   id: string;
   email: string;
   displayName: string;
   role: AppRole;
+  tenantId?: string;
+  tenantSlug?: string;
+  permissions?: Permission[];
 };
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
@@ -64,6 +71,42 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   return { id: identity.userId, email: identity.email, displayName: identity.displayName, role };
 }
 
+export async function loadUserPermissions(
+  user: CurrentUser,
+  tenantCtx: TenantContext,
+): Promise<CurrentUser> {
+  const roleRow = await tenantCtx.db
+    .select()
+    .from(tenantRoles)
+    .where(eq(tenantRoles.key, user.role))
+    .limit(1);
+
+  if (!roleRow[0]) {
+    return {
+      ...user,
+      tenantId: tenantCtx.tenant.id,
+      tenantSlug: tenantCtx.tenant.slug,
+      permissions: [],
+    };
+  }
+
+  const perms = await tenantCtx.db
+    .select({ moduleKey: rolePermissions.moduleKey, action: rolePermissions.action })
+    .from(rolePermissions)
+    .where(eq(rolePermissions.roleId, roleRow[0].id));
+
+  const permissions = perms.map(
+    (p) => `${p.moduleKey}:${p.action}` as Permission
+  );
+
+  return {
+    ...user,
+    tenantId: tenantCtx.tenant.id,
+    tenantSlug: tenantCtx.tenant.slug,
+    permissions,
+  };
+}
+
 export async function requireApiUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) throw new HttpError(401, "Usuário não autenticado.");
@@ -82,8 +125,20 @@ export function requireRole(user: CurrentUser, allowed: readonly AppRole[]) {
   }
 }
 
-export class HttpError extends Error {
-  constructor(public status: number, message: string) {
-    super(message);
+export function requirePermission(user: CurrentUser, required: Permission) {
+  if (!user.permissions || !user.permissions.includes(required)) {
+    throw new HttpError(403, `Permissão necessária: ${required}`);
   }
 }
+
+export function requireAnyPermission(user: CurrentUser, required: Permission[]) {
+  if (!user.permissions || !required.some((p) => user.permissions!.includes(p))) {
+    throw new HttpError(403, `Uma das permissões necessárias: ${required.join(", ")}`);
+  }
+}
+
+export function hasPermission(user: CurrentUser, permission: Permission): boolean {
+  return !!user.permissions && user.permissions.includes(permission);
+}
+
+export { HttpError } from "./errors";
