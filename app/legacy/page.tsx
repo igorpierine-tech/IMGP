@@ -2,27 +2,17 @@ import Script from "next/script";
 import portfolio from "@/data/glpi-portfolio.json";
 import projectUsers from "@/data/glpi-project-users.json";
 import viabilityDemands from "@/data/glpi-viability-demands.json";
-import { asc } from "drizzle-orm";
 import { getDb } from "@/db";
-import { demands, projectItems, projectPhases, projects, projectTypes, sprints, users } from "@/db/schema";
 import { requirePageUser } from "@/lib/server/authz";
 import { APP_BASE_PATH } from "@/lib/app-path";
+import { loadWorkspaceData } from "@/lib/server/workspace-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function LegacyWorkspace() {
   const user = await requirePageUser("/legacy");
-  const [phaseRows, userRows, demandRows, projectRows, itemRows, sprintRows, projectTypeRows] = await Promise.all([
-    getDb().select().from(projectPhases).orderBy(asc(projectPhases.projectRef), asc(projectPhases.sequence)),
-    user.role === "project_coordinator" || user.role === "it_director"
-      ? getDb().select({ id: users.id, email: users.email, displayName: users.displayName, role: users.role, active: users.active, mustChangePassword: users.mustChangePassword }).from(users).orderBy(asc(users.displayName))
-      : Promise.resolve([]),
-    getDb().select().from(demands).orderBy(asc(demands.createdAt)),
-    getDb().select().from(projects).orderBy(asc(projects.createdAt)),
-    getDb().select().from(projectItems).orderBy(asc(projectItems.projectId), asc(projectItems.id)),
-    getDb().select().from(sprints).orderBy(asc(sprints.projectId), asc(sprints.startDate), asc(sprints.id)),
-    getDb().select().from(projectTypes).orderBy(asc(projectTypes.sequence), asc(projectTypes.name)),
-  ]);
+  const { phaseRows, userRows, demandRows, projectRows, itemRows, sprintRows, projectTypeRows } =
+    await loadWorkspaceData(getDb(), user);
   const bootstrap = `window.PROJECTS_BASE_PATH=${safeJson(APP_BASE_PATH)};window.currentUser=${safeJson(user)};window.phaseGroups=${safeJson(phaseRows)};window.projectTypes=${safeJson(projectTypeRows)};window.platformUsers=${safeJson(userRows)};window.platformDemands=${safeJson(demandRows)};window.platformProjects=${safeJson(projectRows)};window.platformProjectItems=${safeJson(itemRows)};window.platformSprints=${safeJson(sprintRows)};window.glpiProjectUsers=${safeJson(projectUsers)};window.glpiViabilityDemands=${safeJson(viabilityDemands)};window.glpiPortfolioData=${safeJson(portfolio)};`;
   return (
     <>
