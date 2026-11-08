@@ -5,6 +5,7 @@ import { getPasswordUser } from "./password-auth";
 import { getDb } from "../../db";
 import { users, rolePermissions, tenantRoles } from "../../db/schema";
 import { HttpError } from "./errors";
+import { extractBearerToken, verifyJwt } from "./jwt";
 import type { Permission, ModuleKey, Action } from "./modules";
 import type { TenantContext } from "./tenant-context";
 
@@ -30,13 +31,33 @@ export type CurrentUser = {
   permissions?: Permission[];
 };
 
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+export async function getCurrentUser(request?: Request): Promise<CurrentUser | null> {
+  if (request) {
+    const bearer = extractBearerToken(request);
+    if (bearer) {
+      try {
+        const payload = await verifyJwt(bearer);
+        return {
+          id: payload.sub,
+          email: payload.email,
+          displayName: payload.name,
+          role: payload.role,
+          ...(payload.tid ? { tenantId: payload.tid } : {}),
+          ...(payload.ts ? { tenantSlug: payload.ts } : {}),
+        };
+      } catch {
+        throw new HttpError(401, "Token de autenticação inválido ou expirado.");
+      }
+    }
+  }
+
   const local = await getPasswordUser();
   if (local) return {
     id: local.id,
     email: local.email,
     displayName: local.displayName,
     role: local.role,
+    ...(local.sessionTenantId ? { tenantId: local.sessionTenantId } : {}),
   };
 
   const identity = await getEntraUser();
@@ -107,8 +128,8 @@ export async function loadUserPermissions(
   };
 }
 
-export async function requireApiUser(): Promise<CurrentUser> {
-  const user = await getCurrentUser();
+export async function requireApiUser(request?: Request): Promise<CurrentUser> {
+  const user = await getCurrentUser(request);
   if (!user) throw new HttpError(401, "Usuário não autenticado.");
   return user;
 }

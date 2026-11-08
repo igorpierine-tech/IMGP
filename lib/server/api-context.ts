@@ -19,7 +19,7 @@ export type ApiContext = {
 };
 
 export async function getApiContext(request: Request): Promise<ApiContext> {
-  const user = await requireApiUser();
+  const user = await requireApiUser(request);
   const slug = extractTenantSlug(request);
 
   if (slug) {

@@ -33,11 +33,13 @@ export const users = sqliteTable("users", {
 export const userSessions = sqliteTable("user_sessions", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tenantId: text("tenant_id"),
   expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
   lastSeenAt: integer("last_seen_at", { mode: "timestamp_ms" }).notNull().default(now),
 }, (table) => [
   index("user_sessions_user_expiry_idx").on(table.userId, table.expiresAt),
+  index("user_sessions_tenant_idx").on(table.tenantId),
 ]);
 
 export const projectPhases = sqliteTable("project_phases", {

@@ -9,6 +9,7 @@ declare namespace Cloudflare {
     SUPABASE_SECRET_KEY?: string;
     MASTER_BOOTSTRAP_TOKEN?: string;
     MASTER_BOOTSTRAP_EMAIL?: string;
+    JWT_SECRET?: string;
   }
 }
 

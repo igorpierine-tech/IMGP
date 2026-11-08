@@ -25,15 +25,16 @@ export async function getPasswordUser() {
     getDb().update(userSessions).set({ lastSeenAt: now }).where(eq(userSessions.id, sessionId)),
     getDb().update(users).set({ lastSeenAt: now }).where(eq(users.id, row.user.id)),
   ]);
-  return row.user;
+  return { ...row.user, sessionTenantId: row.session.tenantId };
 }
 
-export async function createPasswordSession(userId: string) {
+export async function createPasswordSession(userId: string, tenantId?: string) {
   const rawToken = randomToken(32);
   const id = await sha256Hex(rawToken);
   await getDb().insert(userSessions).values({
     id,
     userId,
+    tenantId: tenantId ?? null,
     expiresAt: new Date(Date.now() + SESSION_SECONDS * 1000),
   });
   return rawToken;

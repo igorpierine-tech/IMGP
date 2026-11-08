@@ -26,6 +26,7 @@ const workerVariableNames = [
   "ENTRA_REDIRECT_URI",
   "MASTER_BOOTSTRAP_TOKEN",
   "MASTER_BOOTSTRAP_EMAIL",
+  "JWT_SECRET",
 ];
 const workerVariableArguments = workerVariableNames.flatMap((name) => {
   const value = process.env[name];
