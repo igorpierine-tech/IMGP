@@ -8,6 +8,8 @@ import {
   type AppRole,
 } from "./authz";
 import { extractTenantSlug, getTenantContext, type TenantContext } from "./tenant-context";
+import { checkRateLimit, rateLimitKey } from "./rate-limit";
+import { HttpError } from "./errors";
 import type { Permission } from "./modules";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type * as schema from "../../db/schema";
@@ -19,8 +21,14 @@ export type ApiContext = {
 };
 
 export async function getApiContext(request: Request): Promise<ApiContext> {
-  const user = await requireApiUser(request);
   const slug = extractTenantSlug(request);
+  const rlKey = rateLimitKey(request, slug);
+  const rl = checkRateLimit(rlKey);
+  if (!rl.allowed) {
+    throw new HttpError(429, "Limite de requisições excedido. Tente novamente em breve.");
+  }
+
+  const user = await requireApiUser(request);
 
   if (slug) {
     try {
