@@ -1,0 +1,15 @@
+work/
+outputs/
+.sites-runtime/
+
+dist/
+.next/
+node_modules/
+.wrangler/
+.railway-test-state/
+.env*
+!.env.example
+supabase/.temp/
+site-*.tar.gz
+*.tsbuildinfo
+

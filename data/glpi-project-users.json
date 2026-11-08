@@ -1,0 +1,111 @@
+{
+  "queriedAt": "2026-09-28",
+  "entity": "Bom Jesus > Projeto",
+  "supervisor": "Conforme cadastro do GLPI",
+  "users": [
+    {
+      "glpiId": null,
+      "login": "aline.fernandes",
+      "displayName": "Aline de Oliveira Fernandes",
+      "firstName": "Aline",
+      "lastName": "de Oliveira Fernandes",
+      "email": "aline.fernandes@bomjesus.com",
+      "entity": "Bom Jesus > Projeto",
+      "location": "Matriz",
+      "active": true,
+      "supervisorLogin": "igor.pierini",
+      "supervisorName": "Igor Glingani Pierini"
+    },
+    {
+      "glpiId": null,
+      "login": "anne.lima",
+      "displayName": "Anne Gabrielle de Oliveira Lima",
+      "firstName": "Anne",
+      "lastName": "Gabrielle de Oliveira Lima",
+      "email": "anne.lima@bomjesus.com",
+      "entity": "Bom Jesus > Projeto",
+      "location": "Matriz",
+      "active": true,
+      "supervisorLogin": "igor.pierini",
+      "supervisorName": "Igor Glingani Pierini"
+    },
+    {
+      "glpiId": null,
+      "login": "claudemir.rusi",
+      "displayName": "Claudemir Xavier Rusi",
+      "firstName": "Claudemir",
+      "lastName": "Xavier Rusi",
+      "email": "claudemir.rusi@bomjesus.com",
+      "entity": "Bom Jesus > Projeto",
+      "location": "Matriz",
+      "active": true,
+      "supervisorLogin": "igor.pierini",
+      "supervisorName": "Igor Glingani Pierini"
+    },
+    {
+      "glpiId": null,
+      "login": "igor.pierini",
+      "displayName": "Igor Glingani Pierini",
+      "firstName": "Igor",
+      "lastName": "Glingani Pierini",
+      "email": "igor.pierini@bomjesus.com",
+      "entity": "Bom Jesus > Projeto",
+      "location": "Matriz",
+      "active": true,
+      "supervisorLogin": "laerte.marroni",
+      "supervisorName": "Laerte Marroni"
+    },
+    {
+      "glpiId": 823,
+      "login": "leticia.xavier",
+      "displayName": "Letícia Lopes Xavier",
+      "firstName": "Letícia",
+      "lastName": "Lopes Xavier",
+      "email": "leticia.xavier@bomjesus.com",
+      "entity": "Bom Jesus > Projeto",
+      "location": "Matriz",
+      "active": true,
+      "supervisorLogin": "igor.pierini",
+      "supervisorName": "Igor Glingani Pierini"
+    },
+    {
+      "glpiId": null,
+      "login": "luis.gustavo",
+      "displayName": "Luis Gustavo Schirmer",
+      "firstName": "Luis",
+      "lastName": "Gustavo Schirmer",
+      "email": "luis.gustavo@bomjesus.com",
+      "entity": "Bom Jesus > Projeto",
+      "location": "Matriz",
+      "active": true,
+      "supervisorLogin": "igor.pierini",
+      "supervisorName": "Igor Glingani Pierini"
+    },
+    {
+      "glpiId": null,
+      "login": "maria.azevedo",
+      "displayName": "Maria Isabel de Campos Azevedo",
+      "firstName": "Maria",
+      "lastName": "Isabel de Campos Azevedo",
+      "email": "maria.azevedo@bomjesus.com",
+      "entity": "Bom Jesus > Projeto",
+      "location": "Matriz",
+      "active": true,
+      "supervisorLogin": "igor.pierini",
+      "supervisorName": "Igor Glingani Pierini"
+    },
+    {
+      "glpiId": null,
+      "login": "robson.barbosa",
+      "displayName": "Robson Souza Barbosa",
+      "firstName": "Robson",
+      "lastName": "Souza Barbosa",
+      "email": "robson.barbosa@bomjesus.com",
+      "entity": "Bom Jesus > Projeto",
+      "location": "Matriz",
+      "active": true,
+      "supervisorLogin": "igor.pierini",
+      "supervisorName": "Igor Glingani Pierini"
+    }
+  ]
+}
