@@ -9,6 +9,7 @@ node_modules/
 .railway-test-state/
 .env*
 !.env.example
+.dev.vars
 supabase/.temp/
 site-*.tar.gz
 *.tsbuildinfo

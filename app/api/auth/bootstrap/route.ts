@@ -1,4 +1,5 @@
 import { count, eq, isNotNull } from "drizzle-orm";
+import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { users } from "@/db/schema";
@@ -8,9 +9,10 @@ import { appUrl } from "@/lib/app-path";
 export async function POST(request: Request) {
   const form = await request.formData();
   const token = String(form.get("setupToken") || "");
-  const expectedToken = process.env.AUTH_BOOTSTRAP_TOKEN || "";
+  const cfEnv = env as unknown as Record<string, string | undefined>;
+  const expectedToken = cfEnv.AUTH_BOOTSTRAP_TOKEN || process.env.AUTH_BOOTSTRAP_TOKEN || "";
   const email = normalizeEmail(form.get("email"));
-  const allowedEmail = normalizeEmail(process.env.BOOTSTRAP_ADMIN_EMAIL);
+  const allowedEmail = normalizeEmail(cfEnv.BOOTSTRAP_ADMIN_EMAIL || process.env.BOOTSTRAP_ADMIN_EMAIL);
   const password = String(form.get("password") || "");
   const confirmation = String(form.get("confirmation") || "");
   const fail = (message: string) => NextResponse.redirect(appUrl(`/login?setup=1&error=${encodeURIComponent(message)}`, request.url), 303);

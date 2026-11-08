@@ -43,25 +43,25 @@ export default async function TenantWorkspace({ params }: Props) {
 
   return (
     <>
-      <link rel="stylesheet" href="/legacy/style.css" />
-      <link rel="stylesheet" href="/legacy/project-workspace.css" />
-      <link rel="stylesheet" href="/legacy/glpi-portfolio.css" />
-      <link rel="stylesheet" href="/legacy/time-tracking.css" />
-      <link rel="stylesheet" href="/legacy/status-visuals.css" />
-      <link rel="stylesheet" href="/legacy/dashboards.css" />
-      <link rel="stylesheet" href="/legacy/multi-select.css" />
-      <link rel="stylesheet" href="/legacy/responsive.css" />
+      <link rel="stylesheet" href={`${APP_BASE_PATH}/legacy/style.css`} />
+      <link rel="stylesheet" href={`${APP_BASE_PATH}/legacy/project-workspace.css`} />
+      <link rel="stylesheet" href={`${APP_BASE_PATH}/legacy/glpi-portfolio.css`} />
+      <link rel="stylesheet" href={`${APP_BASE_PATH}/legacy/time-tracking.css`} />
+      <link rel="stylesheet" href={`${APP_BASE_PATH}/legacy/status-visuals.css`} />
+      <link rel="stylesheet" href={`${APP_BASE_PATH}/legacy/dashboards.css`} />
+      <link rel="stylesheet" href={`${APP_BASE_PATH}/legacy/multi-select.css`} />
+      <link rel="stylesheet" href={`${APP_BASE_PATH}/legacy/responsive.css`} />
       <div id="app" />
       <Script id="authenticated-workspace-data" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: bootstrap }} />
-      <Script src="/legacy/app.js" strategy="afterInteractive" />
-      <Script src="/legacy/multi-select.js" strategy="afterInteractive" />
-      <Script src="/legacy/project-workspace.js" strategy="afterInteractive" />
-      <Script src="/legacy/glpi-portfolio.js" strategy="afterInteractive" />
-      <Script src="/legacy/time-tracking.js" strategy="afterInteractive" />
-      <Script src="/legacy/status-visuals.js" strategy="afterInteractive" />
-      <Script src="/legacy/dashboards.js" strategy="afterInteractive" />
-      <Script src="/legacy/roi.js" strategy="afterInteractive" />
-      <Script src="/legacy/foundation-client.js" strategy="afterInteractive" />
+      <Script src={`${APP_BASE_PATH}/legacy/app.js`} strategy="afterInteractive" />
+      <Script src={`${APP_BASE_PATH}/legacy/multi-select.js`} strategy="afterInteractive" />
+      <Script src={`${APP_BASE_PATH}/legacy/project-workspace.js`} strategy="afterInteractive" />
+      <Script src={`${APP_BASE_PATH}/legacy/glpi-portfolio.js`} strategy="afterInteractive" />
+      <Script src={`${APP_BASE_PATH}/legacy/time-tracking.js`} strategy="afterInteractive" />
+      <Script src={`${APP_BASE_PATH}/legacy/status-visuals.js`} strategy="afterInteractive" />
+      <Script src={`${APP_BASE_PATH}/legacy/dashboards.js`} strategy="afterInteractive" />
+      <Script src={`${APP_BASE_PATH}/legacy/roi.js`} strategy="afterInteractive" />
+      <Script src={`${APP_BASE_PATH}/legacy/foundation-client.js`} strategy="afterInteractive" />
     </>
   );
 }
