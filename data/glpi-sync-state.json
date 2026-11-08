@@ -1,28 +1,6 @@
 {
   "version": 1,
-  "portfolio": {
-    "lastSuccessfulSyncAt": "2026-10-13T19:31:41+00:00",
-    "mode": "incremental",
-    "stats": {
-      "projectsRead": 8,
-      "tasksChangedRead": 9,
-      "projectsAffected": 8,
-      "projectTasksRefreshed": 439,
-      "totalProjectsPreserved": 137,
-      "totalTasksPreserved": 4021,
-      "queryFrom": "2026-10-06 16:30:35"
-    }
-  },
-  "updatedAt": "2026-10-13T19:31:48+00:00",
-  "viability": {
-    "lastSuccessfulSyncAt": "2026-10-13T19:31:46+00:00",
-    "mode": "incremental",
-    "stats": {
-      "ticketsRead": 0,
-      "demandsChanged": 0,
-      "demandsRemoved": 0,
-      "totalDemandsPreserved": 87,
-      "queryFrom": "2026-10-06 16:32:40"
-    }
-  }
+  "portfolio": null,
+  "updatedAt": null,
+  "viability": null
 }

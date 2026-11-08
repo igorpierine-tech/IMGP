@@ -1,8 +1,8 @@
 let timeFilterPeople=[],timeFilterProjects=[];
 function setTimeFilterPeople(values){timeFilterPeople=values;render()}
 function setTimeFilterProjects(values){timeFilterProjects=values;render()}
-const timeStorageKey='bom-jesus-project-time-entries-v1';
-const timerStorageKey='bom-jesus-project-task-timers-v2';
+const timeStorageKey='rr-project-time-entries-v1';
+const timerStorageKey='rr-project-task-timers-v2';
 const timeBaseActuals=new Map(tasks.map(t=>[t.id,Number(t.actual)||0]));
 let timeEntries=loadTimeEntries();
 let taskTimers=loadTaskTimers();

@@ -3,7 +3,7 @@ const PROJECTS_BASE_PATH=window.PROJECTS_BASE_PATH||'/Projetos';
 function projectPath(path){const normalized=path.startsWith('/')?path:`/${path}`;return normalized===PROJECTS_BASE_PATH||normalized.startsWith(`${PROJECTS_BASE_PATH}/`)?normalized:normalized==='/'?PROJECTS_BASE_PATH:`${PROJECTS_BASE_PATH}${normalized}`}
 const platformFetch=window.fetch.bind(window);window.fetch=(input,init)=>{const url=typeof input==='string'&&input.startsWith('/')?projectPath(input):input;if(window.tenantSlug&&typeof url==='string'&&url.includes('/api/')){const headers=new Headers(init?.headers);if(!headers.has('x-tenant-slug'))headers.set('x-tenant-slug',window.tenantSlug);return platformFetch(url,{...init,headers})}return platformFetch(url,init)};
 const currentIdentity=window.currentUser||{displayName:'Usuário',email:'',role:'viewer'};const identityInitials=currentIdentity.displayName.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toUpperCase()||'US';
-const glpiProjectDirectory=window.glpiProjectUsers&&Array.isArray(window.glpiProjectUsers.users)?window.glpiProjectUsers:{users:[],entity:'Bom Jesus > Projeto',supervisor:'Igor Glingani Pierini'};
+const glpiProjectDirectory=window.glpiProjectUsers&&Array.isArray(window.glpiProjectUsers.users)?window.glpiProjectUsers:{users:[],entity:'',supervisor:''};
 const activeProjectResources=glpiProjectDirectory.users.filter(user=>user.active!==false);
 const currentResource=activeProjectResources.find(user=>String(user.email||'').toLowerCase()===String(currentIdentity.email||'').toLowerCase());
 const people=activeProjectResources.map(user=>user.displayName);if(!currentResource&&currentIdentity.displayName)people.unshift(currentIdentity.displayName);
