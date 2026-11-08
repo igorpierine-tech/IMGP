@@ -4,7 +4,7 @@ import { errorMessage } from "@/lib/server/errors";
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    const { email, password } = await request.json() as Record<string, string>;
 
     if (!email || !password) {
       return Response.json({ error: "Email e senha são obrigatórios." }, { status: 400 });

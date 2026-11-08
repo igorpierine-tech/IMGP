@@ -19,8 +19,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await requireSuperAdmin(request);
-    const body = await request.json();
-    const { slug, name, planId, maxUsers, domain } = body;
+    const body = await request.json() as Record<string, unknown>;
+    const slug = typeof body.slug === "string" ? body.slug.trim() : "";
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const planId = typeof body.planId === "number" ? body.planId : null;
+    const maxUsers = typeof body.maxUsers === "number" ? body.maxUsers : 10;
+    const domain = typeof body.domain === "string" ? body.domain.trim() : null;
 
     if (!slug || !name) {
       throw new HttpError(400, "Slug e nome são obrigatórios.");
@@ -51,9 +55,9 @@ export async function POST(request: Request) {
         id,
         slug,
         name,
-        planId: planId ?? null,
-        maxUsers: maxUsers ?? 10,
-        domain: domain ?? null,
+        planId,
+        maxUsers,
+        domain,
         dbFileName,
         status: "trial",
         trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -79,8 +83,8 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const user = await requireSuperAdmin(request);
-    const body = await request.json();
-    const { id, ...updates } = body;
+    const body = await request.json() as Record<string, unknown>;
+    const id = typeof body.id === "string" ? body.id : "";
 
     if (!id) throw new HttpError(400, "ID do tenant é obrigatório.");
 
@@ -98,7 +102,7 @@ export async function PATCH(request: Request) {
     ];
     const filtered: Record<string, unknown> = { updatedAt: new Date() };
     for (const key of allowed) {
-      if (key in updates) filtered[key] = updates[key];
+      if (key in body) filtered[key] = body[key];
     }
 
     await db.update(tenants).set(filtered).where(eq(tenants.id, id));

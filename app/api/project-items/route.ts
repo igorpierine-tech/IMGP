@@ -1,21 +1,21 @@
 import { eq } from "drizzle-orm";
-import { getDb } from "@/db";
 import { projectItems, projectPhases, projects, sprints } from "@/db/schema";
-import { HttpError, requireApiUser, requireRole } from "@/lib/server/authz";
+import { HttpError } from "@/lib/server/authz";
 import { errorMessage } from "@/lib/server/errors";
 import { writeAudit } from "@/lib/server/audit";
+import { getApiContext, checkPermissionOrRole } from "@/lib/server/api-context";
 
 const editors = ["project_coordinator", "it_director", "project_analyst"] as const;
 
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    const actor = await requireApiUser();
-    requireRole(actor, editors);
+    const ctx = await getApiContext(request);
+    checkPermissionOrRole(ctx, "projects:create", editors);
     const body = await request.json() as Record<string, unknown>;
-    const values = await validatedValues(body);
-    const [created] = await getDb().insert(projectItems).values({ ...values, source: "platform" }).returning();
-    await writeAudit({ actor, action: "project_item.created", entityType: "project_item", entityId: created.id, requestId: request.headers.get("cf-ray"), after: created });
+    const values = await validatedValues(body, undefined, ctx.db);
+    const [created] = await ctx.db.insert(projectItems).values({ ...values, source: "platform" }).returning();
+    await writeAudit({ actor: ctx.user, action: "project_item.created", entityType: "project_item", entityId: created.id, requestId: request.headers.get("cf-ray"), after: created, db: ctx.db });
     return Response.json({ item: created }, { status: 201 });
   } catch (error) {
     return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
@@ -25,39 +25,40 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     assertSameOrigin(request);
-    const actor = await requireApiUser();
-    requireRole(actor, editors);
+    const ctx = await getApiContext(request);
+    checkPermissionOrRole(ctx, "projects:update", editors);
     const body = await request.json() as Record<string, unknown>;
     const id = positiveInteger(body.id);
     if (!id) throw new HttpError(400, "Tarefa ou marco não informado.");
-    const [before] = await getDb().select().from(projectItems).where(eq(projectItems.id, id)).limit(1);
+    const [before] = await ctx.db.select().from(projectItems).where(eq(projectItems.id, id)).limit(1);
     if (!before) throw new HttpError(404, "Tarefa ou marco não encontrado.");
-    const values = await validatedValues(body, before.projectId);
-    const [updated] = await getDb().update(projectItems).set({ ...values, updatedAt: new Date() }).where(eq(projectItems.id, id)).returning();
-    await writeAudit({ actor, action: "project_item.updated", entityType: "project_item", entityId: id, requestId: request.headers.get("cf-ray"), before, after: updated });
+    const values = await validatedValues(body, before.projectId, ctx.db);
+    const [updated] = await ctx.db.update(projectItems).set({ ...values, updatedAt: new Date() }).where(eq(projectItems.id, id)).returning();
+    await writeAudit({ actor: ctx.user, action: "project_item.updated", entityType: "project_item", entityId: id, requestId: request.headers.get("cf-ray"), before, after: updated, db: ctx.db });
     return Response.json({ item: updated });
   } catch (error) {
     return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
   }
 }
 
-async function validatedValues(body: Record<string, unknown>, fallbackProjectId?: number) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function validatedValues(body: Record<string, unknown>, fallbackProjectId: number | undefined, db: any) {
   const projectId = positiveInteger(body.projectId) || fallbackProjectId;
   const name = clean(body.name, 250);
-  const kind = body.kind === "milestone" || body.kind === "subtask" ? body.kind : "task";
+  const kind: "task" | "milestone" | "subtask" = body.kind === "milestone" || body.kind === "subtask" ? body.kind : "task";
   if (!projectId || !name) throw new HttpError(400, "Projeto e título são obrigatórios.");
-  const [project] = await getDb().select().from(projects).where(eq(projects.id, projectId)).limit(1);
+  const [project] = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
   if (!project) throw new HttpError(404, "Projeto não encontrado.");
 
   const phaseId = nullableInteger(body.phaseId);
   if (phaseId) {
-    const [phase] = await getDb().select().from(projectPhases).where(eq(projectPhases.id, phaseId)).limit(1);
+    const [phase] = await db.select().from(projectPhases).where(eq(projectPhases.id, phaseId)).limit(1);
     const expectedRef = project.source === "glpi" ? `glpi:${project.externalId}` : `platform:${project.id}`;
     if (!phase || phase.projectRef !== expectedRef) throw new HttpError(400, "A fase selecionada não pertence ao projeto.");
   }
   const sprintId = nullableInteger(body.sprintId);
   if (sprintId) {
-    const [sprint] = await getDb().select().from(sprints).where(eq(sprints.id, sprintId)).limit(1);
+    const [sprint] = await db.select().from(sprints).where(eq(sprints.id, sprintId)).limit(1);
     if (!sprint || sprint.projectId !== projectId) throw new HttpError(400, "A sprint selecionada não pertence ao projeto.");
   }
   return {

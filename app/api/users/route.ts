@@ -1,18 +1,18 @@
 import { asc, eq } from "drizzle-orm";
-import { getDb } from "@/db";
 import { users } from "@/db/schema";
-import { AppRole, HttpError, requireApiUser, requireRole, roles } from "@/lib/server/authz";
+import { AppRole, HttpError, roles } from "@/lib/server/authz";
 import { errorMessage } from "@/lib/server/errors";
 import { hashPassword, normalizeEmail, validatePassword } from "@/lib/server/password-auth";
 import { writeAudit } from "@/lib/server/audit";
+import { getApiContext, checkPermissionOrRole } from "@/lib/server/api-context";
 
 const managers = ["project_coordinator", "it_director"] as const;
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const actor = await requireApiUser();
-    requireRole(actor, managers);
-    const rows = await getDb().select({
+    const ctx = await getApiContext(request);
+    checkPermissionOrRole(ctx, "users:read", managers);
+    const rows = await ctx.db.select({
       id: users.id, email: users.email, displayName: users.displayName, role: users.role,
       active: users.active, mustChangePassword: users.mustChangePassword, lastSeenAt: users.lastSeenAt,
     }).from(users).orderBy(asc(users.displayName));
@@ -25,8 +25,8 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    const actor = await requireApiUser();
-    requireRole(actor, managers);
+    const ctx = await getApiContext(request);
+    checkPermissionOrRole(ctx, "users:create", managers);
     const body = await request.json() as Record<string, unknown>;
     const displayName = typeof body.displayName === "string" ? body.displayName.trim() : "";
     const email = normalizeEmail(body.email);
@@ -35,16 +35,16 @@ export async function POST(request: Request) {
     if (!displayName || !email) throw new HttpError(400, "Nome e e-mail são obrigatórios.");
     const passwordError = validatePassword(password);
     if (passwordError) throw new HttpError(400, passwordError);
-    const existing = await getDb().select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+    const existing = await ctx.db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
     if (existing.length) throw new HttpError(409, "Já existe um usuário com este e-mail.");
     const passwordData = await hashPassword(password);
-    const [created] = await getDb().insert(users).values({
+    const [created] = await ctx.db.insert(users).values({
       id: `local:${crypto.randomUUID()}`, email, displayName, role, active: true,
       passwordHash: passwordData.hash, passwordSalt: passwordData.salt,
       passwordIterations: passwordData.iterations, passwordSetAt: new Date(),
-      mustChangePassword: true, invitedBy: actor.id,
+      mustChangePassword: true, invitedBy: ctx.user.id,
     }).returning({ id: users.id, email: users.email, displayName: users.displayName, role: users.role, active: users.active, mustChangePassword: users.mustChangePassword });
-    await writeAudit({ actor, action: "user.created", entityType: "user", entityId: created.id, requestId: request.headers.get("cf-ray"), after: created });
+    await writeAudit({ actor: ctx.user, action: "user.created", entityType: "user", entityId: created.id, requestId: request.headers.get("cf-ray"), after: created, db: ctx.db });
     return Response.json({ user: created }, { status: 201 });
   } catch (error) {
     return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
@@ -54,8 +54,8 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     assertSameOrigin(request);
-    const actor = await requireApiUser();
-    requireRole(actor, managers);
+    const ctx = await getApiContext(request);
+    checkPermissionOrRole(ctx, "users:update", managers);
     const body = await request.json() as Record<string, unknown>;
     const id = typeof body.id === "string" ? body.id : "";
     if (!id) throw new HttpError(400, "Usuário não informado.");
@@ -69,9 +69,9 @@ export async function PATCH(request: Request) {
       const data = await hashPassword(body.password);
       Object.assign(update, { passwordHash: data.hash, passwordSalt: data.salt, passwordIterations: data.iterations, passwordSetAt: new Date(), mustChangePassword: true, failedLoginAttempts: 0, lockedUntil: null });
     }
-    const [updated] = await getDb().update(users).set(update).where(eq(users.id, id)).returning({ id: users.id, email: users.email, displayName: users.displayName, role: users.role, active: users.active, mustChangePassword: users.mustChangePassword });
+    const [updated] = await ctx.db.update(users).set(update).where(eq(users.id, id)).returning({ id: users.id, email: users.email, displayName: users.displayName, role: users.role, active: users.active, mustChangePassword: users.mustChangePassword });
     if (!updated) throw new HttpError(404, "Usuário não encontrado.");
-    await writeAudit({ actor, action: "user.updated", entityType: "user", entityId: id, requestId: request.headers.get("cf-ray"), after: updated });
+    await writeAudit({ actor: ctx.user, action: "user.updated", entityType: "user", entityId: id, requestId: request.headers.get("cf-ray"), after: updated, db: ctx.db });
     return Response.json({ user: updated });
   } catch (error) {
     return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });

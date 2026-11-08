@@ -1,22 +1,21 @@
 import { count, desc } from "drizzle-orm";
-import { getDb } from "@/db";
 import { auditEvents, projectItems, projects, timeEntries, users } from "@/db/schema";
-import { HttpError, requireApiUser } from "@/lib/server/authz";
+import { HttpError } from "@/lib/server/authz";
 import { errorMessage } from "@/lib/server/errors";
+import { getApiContext } from "@/lib/server/api-context";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const user = await requireApiUser();
-    const db = getDb();
+    const ctx = await getApiContext(request);
     const [projectCount, itemCount, timeCount, userCount, events] = await Promise.all([
-      db.select({ value: count() }).from(projects),
-      db.select({ value: count() }).from(projectItems),
-      db.select({ value: count() }).from(timeEntries),
-      db.select({ value: count() }).from(users),
-      db.select().from(auditEvents).orderBy(desc(auditEvents.occurredAt)).limit(12),
+      ctx.db.select({ value: count() }).from(projects),
+      ctx.db.select({ value: count() }).from(projectItems),
+      ctx.db.select({ value: count() }).from(timeEntries),
+      ctx.db.select({ value: count() }).from(users),
+      ctx.db.select().from(auditEvents).orderBy(desc(auditEvents.occurredAt)).limit(12),
     ]);
     return Response.json({
-      user,
+      user: ctx.user,
       database: {
         provider: "Cloudflare D1",
         projects: projectCount[0].value,

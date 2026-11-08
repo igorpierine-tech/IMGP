@@ -7,7 +7,7 @@ import { errorMessage } from "@/lib/server/errors";
 
 export async function POST(request: Request) {
   try {
-    const { token, email, password, displayName } = await request.json();
+    const { token, email, password, displayName } = await request.json() as Record<string, string>;
 
     if (!env.MASTER_BOOTSTRAP_TOKEN || token !== env.MASTER_BOOTSTRAP_TOKEN) {
       return Response.json({ error: "Token de bootstrap inválido." }, { status: 403 });

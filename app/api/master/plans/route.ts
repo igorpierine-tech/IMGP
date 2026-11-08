@@ -32,8 +32,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await requireSuperAdmin(request);
-    const body = await request.json();
-    const { name, description, maxUsers, priceMonthly, modules: moduleDefs } = body;
+    const body = await request.json() as Record<string, unknown>;
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const description = typeof body.description === "string" ? body.description.trim() : null;
+    const maxUsers = typeof body.maxUsers === "number" ? body.maxUsers : 10;
+    const priceMonthly = typeof body.priceMonthly === "number" ? body.priceMonthly : 0;
+    const moduleDefs = Array.isArray(body.modules) ? body.modules : null;
 
     if (!name) throw new HttpError(400, "Nome do plano é obrigatório.");
 
@@ -51,18 +55,18 @@ export async function POST(request: Request) {
       .insert(plans)
       .values({
         name,
-        description: description ?? null,
-        maxUsers: maxUsers ?? 10,
-        priceMonthly: priceMonthly ?? 0,
+        description,
+        maxUsers,
+        priceMonthly,
       })
       .returning();
 
-    if (Array.isArray(moduleDefs)) {
-      for (const mod of moduleDefs) {
+    if (moduleDefs) {
+      for (const mod of moduleDefs as Record<string, unknown>[]) {
         if (!mod.moduleKey) continue;
         await db.insert(planModules).values({
           planId: created.id,
-          moduleKey: mod.moduleKey,
+          moduleKey: String(mod.moduleKey),
           actionsJson: JSON.stringify(mod.actions ?? ["read"]),
         });
       }
@@ -87,10 +91,11 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const user = await requireSuperAdmin(request);
-    const body = await request.json();
-    const { id, modules: moduleDefs, ...updates } = body;
+    const body = await request.json() as Record<string, unknown>;
+    const id = Number(body.id);
+    const patchModules = Array.isArray(body.modules) ? body.modules as Record<string, unknown>[] : null;
 
-    if (!id) throw new HttpError(400, "ID do plano é obrigatório.");
+    if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, "ID do plano é obrigatório.");
 
     const db = getMasterDb();
     const existing = await db
@@ -106,18 +111,18 @@ export async function PATCH(request: Request) {
     ];
     const filtered: Record<string, unknown> = { updatedAt: new Date() };
     for (const key of allowed) {
-      if (key in updates) filtered[key] = updates[key];
+      if (key in body) filtered[key] = body[key];
     }
 
     await db.update(plans).set(filtered).where(eq(plans.id, id));
 
-    if (Array.isArray(moduleDefs)) {
+    if (patchModules) {
       await db.delete(planModules).where(eq(planModules.planId, id));
-      for (const mod of moduleDefs) {
+      for (const mod of patchModules) {
         if (!mod.moduleKey) continue;
         await db.insert(planModules).values({
           planId: id,
-          moduleKey: mod.moduleKey,
+          moduleKey: String(mod.moduleKey),
           actionsJson: JSON.stringify(mod.actions ?? ["read"]),
         });
       }
