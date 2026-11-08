@@ -49,7 +49,7 @@ async function validatedValues(body: Record<string, unknown>, fallbackProjectId:
   if (!projectId || !phaseId || !name) throw new HttpError(400, "Projeto, fase e nome da sprint são obrigatórios.");
   const [project] = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
   const [phase] = await db.select().from(projectPhases).where(eq(projectPhases.id, phaseId)).limit(1);
-  const expectedRef = project?.source === "glpi" ? `glpi:${project.externalId}` : `platform:${projectId}`;
+  const expectedRef = project?.source === "external" ? `external:${project.externalId}` : `platform:${projectId}`;
   if (!project) throw new HttpError(404, "Projeto não encontrado.");
   if (!phase || phase.projectRef !== expectedRef) throw new HttpError(400, "A fase selecionada não pertence ao projeto.");
   return {

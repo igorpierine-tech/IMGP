@@ -9,7 +9,7 @@ function statusColorClass(value){
 }
 function statusLegend(includeBlocked=false){return `<div class="status-legend"><b>Status</b><span class="status-todo">A fazer / Backlog</span><span class="status-doing">Em andamento</span><span class="status-review">Em validação</span><span class="status-done">Concluído</span>${includeBlocked?'<span class="status-blocked">Suspenso / Inviável</span>':''}</div>`}
 
-const deadlineReference=String((typeof glpiPortfolioData!=='undefined'&&glpiPortfolioData.queriedAt)||new Date().toISOString()).slice(0,10);
+const deadlineReference=String((typeof externalPortfolioData!=='undefined'&&externalPortfolioData.queriedAt)||new Date().toISOString()).slice(0,10);
 function deadlineHealth(item){
   const completed=item?.state===3||['Concluído','Inviável Financeiramente'].includes(item?.status);
   if(completed)return 'Dentro do Prazo';

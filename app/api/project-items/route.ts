@@ -53,7 +53,7 @@ async function validatedValues(body: Record<string, unknown>, fallbackProjectId:
   const phaseId = nullableInteger(body.phaseId);
   if (phaseId) {
     const [phase] = await db.select().from(projectPhases).where(eq(projectPhases.id, phaseId)).limit(1);
-    const expectedRef = project.source === "glpi" ? `glpi:${project.externalId}` : `platform:${project.id}`;
+    const expectedRef = project.source === "external" ? `external:${project.externalId}` : `platform:${project.id}`;
     if (!phase || phase.projectRef !== expectedRef) throw new HttpError(400, "A fase selecionada não pertence ao projeto.");
   }
   const sprintId = nullableInteger(body.sprintId);

@@ -14,7 +14,7 @@ Pacote completo de exportação da versão 44, referência de código `7ab28f17a
 
 ## Compatibilidade preservada
 
-O rebranding altera a identidade visual e os textos institucionais para Raízes e Riquezas. As conexões ativas com o GLPI foram removidas. Identificadores internos, chaves de armazenamento local e snapshots já incorporados foram preservados apenas para manter o histórico existente.
+O rebranding altera a identidade visual e os textos institucionais para Raízes e Riquezas. As conexões ativas com sistemas externos legados foram removidas. Identificadores internos, chaves de armazenamento local e snapshots já incorporados foram preservados apenas para manter o histórico existente.
 
 ## Requisitos
 

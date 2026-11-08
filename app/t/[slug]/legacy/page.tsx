@@ -36,16 +36,16 @@ export default async function TenantWorkspace({ params }: Props) {
     `window.platformProjects=${safeJson(projectRows)}`,
     `window.platformProjectItems=${safeJson(itemRows)}`,
     `window.platformSprints=${safeJson(sprintRows)}`,
-    `window.glpiProjectUsers=${safeJson({ users: [], entity: tenant.name })}`,
-    `window.glpiViabilityDemands=${safeJson({ tickets: [] })}`,
-    `window.glpiPortfolioData=${safeJson({})}`,
+    `window.externalProjectUsers=${safeJson({ users: [], entity: tenant.name })}`,
+    `window.externalViabilityDemands=${safeJson({ tickets: [] })}`,
+    `window.externalPortfolioData=${safeJson({})}`,
   ].join(";") + ";";
 
   return (
     <>
       <link rel="stylesheet" href={`${APP_BASE_PATH}/legacy/style.css`} />
       <link rel="stylesheet" href={`${APP_BASE_PATH}/legacy/project-workspace.css`} />
-      <link rel="stylesheet" href={`${APP_BASE_PATH}/legacy/glpi-portfolio.css`} />
+      <link rel="stylesheet" href={`${APP_BASE_PATH}/legacy/portfolio.css`} />
       <link rel="stylesheet" href={`${APP_BASE_PATH}/legacy/time-tracking.css`} />
       <link rel="stylesheet" href={`${APP_BASE_PATH}/legacy/status-visuals.css`} />
       <link rel="stylesheet" href={`${APP_BASE_PATH}/legacy/dashboards.css`} />
@@ -56,7 +56,7 @@ export default async function TenantWorkspace({ params }: Props) {
       <Script src={`${APP_BASE_PATH}/legacy/app.js`} strategy="afterInteractive" />
       <Script src={`${APP_BASE_PATH}/legacy/multi-select.js`} strategy="afterInteractive" />
       <Script src={`${APP_BASE_PATH}/legacy/project-workspace.js`} strategy="afterInteractive" />
-      <Script src={`${APP_BASE_PATH}/legacy/glpi-portfolio.js`} strategy="afterInteractive" />
+      <Script src={`${APP_BASE_PATH}/legacy/portfolio.js`} strategy="afterInteractive" />
       <Script src={`${APP_BASE_PATH}/legacy/time-tracking.js`} strategy="afterInteractive" />
       <Script src={`${APP_BASE_PATH}/legacy/status-visuals.js`} strategy="afterInteractive" />
       <Script src={`${APP_BASE_PATH}/legacy/dashboards.js`} strategy="afterInteractive" />

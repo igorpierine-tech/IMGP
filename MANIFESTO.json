@@ -472,32 +472,32 @@
       "sha256": "2ed212576e61f83f86a4ea00d40751181e5889b2bf8d660eede5d0adee46cb76"
     },
     {
-      "path": "data/glpi-portfolio-delta.json",
+      "path": "data/external-portfolio-delta.json",
       "bytes": 105635,
       "sha256": "8f431a7a528e3af1e28f41c126d25bb838c4c60786bf6cb8c530555d1437517d"
     },
     {
-      "path": "data/glpi-portfolio.json",
+      "path": "data/external-portfolio.json",
       "bytes": 933396,
       "sha256": "f36db4dad81a0d1457ab9f51640a83abb7b52087fc7311e0fbedc778f1519f27"
     },
     {
-      "path": "data/glpi-project-users.json",
+      "path": "data/external-project-users.json",
       "bytes": 3488,
       "sha256": "c3099ff2f84f9d379cd08e9302458374eb0ab65a17a3edad3cfaa950b6085a34"
     },
     {
-      "path": "data/glpi-sync-state.json",
+      "path": "data/sync-state.json",
       "bytes": 731,
       "sha256": "d55ee248e2e658ded117c18be7f09395ddecc88773ff60377aacae701df12791"
     },
     {
-      "path": "data/glpi-viability-demands-delta.json",
+      "path": "data/external-viability-demands-delta.json",
       "bytes": 189,
       "sha256": "ff85e5798ebcf3555f2e7ce0521a96a3e405c7e7ff293cebcd4203cbf6264e9e"
     },
     {
-      "path": "data/glpi-viability-demands.json",
+      "path": "data/external-viability-demands.json",
       "bytes": 115716,
       "sha256": "f3f9bb6b11e013e61295a0ac9563d6a73bd2abd35310a3f3d6d0d498ed8b9376"
     },
@@ -1362,12 +1362,12 @@
       "sha256": "dbb1cd2c3b7d101b9982ef8f09bb4691fd6bd7e5c65d413e37b6d27d0b0f9bcc"
     },
     {
-      "path": "public/legacy/glpi-portfolio.css",
+      "path": "public/legacy/portfolio.css",
       "bytes": 886,
       "sha256": "0e2e8f103b19311fb537bd1113f0f8facaf5d05a9ed71f070e638acfe1796d23"
     },
     {
-      "path": "public/legacy/glpi-portfolio.js",
+      "path": "public/legacy/portfolio.js",
       "bytes": 12031,
       "sha256": "bccdd191823b6ddfc42f4c9f7056fc6b7819f5b7e136c1e4b07cafb4914514c4"
     },
