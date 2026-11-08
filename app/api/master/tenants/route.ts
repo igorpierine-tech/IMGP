@@ -3,6 +3,7 @@ import { getMasterDb } from "@/db";
 import { tenants, masterAuditEvents } from "@/db/master-schema";
 import { requireMasterUser, requireSuperAdmin } from "@/lib/server/master-auth";
 import { HttpError, errorMessage } from "@/lib/server/errors";
+import { initializeTenantDb } from "@/lib/server/tenant-init";
 
 export async function GET(request: Request) {
   try {
@@ -72,6 +73,8 @@ export async function POST(request: Request) {
       entityId: id,
       afterJson: JSON.stringify(created),
     });
+
+    await initializeTenantDb(id);
 
     return Response.json(created, { status: 201 });
   } catch (error) {
