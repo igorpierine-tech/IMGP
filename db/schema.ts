@@ -480,6 +480,167 @@ export const favorites = sqliteTable("favorites", {
   index("favorites_user_idx").on(table.userId),
 ]);
 
+export const checklistItems = sqliteTable("checklist_items", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  itemId: integer("item_id").notNull().references(() => projectItems.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  checked: integer("checked", { mode: "boolean" }).notNull().default(false),
+  sequence: integer("sequence").notNull().default(0),
+  assignedUserId: text("assigned_user_id").references(() => users.id),
+  dueDate: text("due_date"),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  index("checklist_items_item_idx").on(table.itemId, table.sequence),
+]);
+
+export const taskRecurrences = sqliteTable("task_recurrences", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  sourceItemId: integer("source_item_id").notNull().references(() => projectItems.id, { onDelete: "cascade" }),
+  frequency: text("frequency").notNull().default("weekly"),
+  intervalValue: integer("interval_value").notNull().default(1),
+  dayOfWeek: integer("day_of_week"),
+  dayOfMonth: integer("day_of_month"),
+  nextOccurrence: text("next_occurrence"),
+  maxOccurrences: integer("max_occurrences"),
+  occurrencesCreated: integer("occurrences_created").notNull().default(0),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdBy: text("created_by").references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  index("task_recurrences_active_idx").on(table.active, table.nextOccurrence),
+]);
+
+export const raciAssignments = sqliteTable("raci_assignments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  entityType: text("entity_type").notNull(),
+  entityId: integer("entity_id").notNull(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  raciRole: text("raci_role").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  uniqueIndex("raci_unique_idx").on(table.entityType, table.entityId, table.userId, table.raciRole),
+  index("raci_entity_idx").on(table.entityType, table.entityId),
+  index("raci_user_idx").on(table.userId),
+]);
+
+export const objectives = sqliteTable("objectives", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  title: text("title").notNull(),
+  description: text("description"),
+  ownerUserId: text("owner_user_id").references(() => users.id),
+  period: text("period"),
+  status: text("status").notNull().default("active"),
+  progress: integer("progress").notNull().default(0),
+  parentId: integer("parent_id"),
+  createdBy: text("created_by").references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  index("objectives_status_idx").on(table.status),
+  index("objectives_owner_idx").on(table.ownerUserId),
+]);
+
+export const keyResults = sqliteTable("key_results", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  objectiveId: integer("objective_id").notNull().references(() => objectives.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  metricType: text("metric_type").notNull().default("percentage"),
+  targetValue: real("target_value").notNull().default(100),
+  currentValue: real("current_value").notNull().default(0),
+  unit: text("unit"),
+  linkedProjectId: integer("linked_project_id").references(() => projects.id, { onDelete: "set null" }),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  index("key_results_objective_idx").on(table.objectiveId),
+]);
+
+export const portfolios = sqliteTable("portfolios", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  description: text("description"),
+  ownerUserId: text("owner_user_id").references(() => users.id),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdBy: text("created_by").references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(now),
+});
+
+export const portfolioProjects = sqliteTable("portfolio_projects", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  portfolioId: integer("portfolio_id").notNull().references(() => portfolios.id, { onDelete: "cascade" }),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  strategicAlignment: text("strategic_alignment"),
+  priority: integer("priority").notNull().default(0),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  uniqueIndex("portfolio_projects_unique_idx").on(table.portfolioId, table.projectId),
+]);
+
+export const approvalChains = sqliteTable("approval_chains", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  entityType: text("entity_type").notNull(),
+  stepsJson: text("steps_json").notNull(),
+  escalationHours: integer("escalation_hours"),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdBy: text("created_by").references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(now),
+});
+
+export const approvalRequests = sqliteTable("approval_requests", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  chainId: integer("chain_id").notNull().references(() => approvalChains.id, { onDelete: "cascade" }),
+  entityType: text("entity_type").notNull(),
+  entityId: integer("entity_id").notNull(),
+  currentStep: integer("current_step").notNull().default(0),
+  status: text("status").notNull().default("pending"),
+  requestedBy: text("requested_by").notNull().references(() => users.id),
+  completedAt: integer("completed_at", { mode: "timestamp_ms" }),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  index("approval_requests_status_idx").on(table.status, table.entityType),
+]);
+
+export const approvalStepsLog = sqliteTable("approval_steps_log", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  requestId: integer("request_id").notNull().references(() => approvalRequests.id, { onDelete: "cascade" }),
+  stepIndex: integer("step_index").notNull(),
+  approverUserId: text("approver_user_id").references(() => users.id),
+  decision: text("decision").notNull().default("pending"),
+  comment: text("comment"),
+  decidedAt: integer("decided_at", { mode: "timestamp_ms" }),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  index("approval_steps_request_idx").on(table.requestId, table.stepIndex),
+]);
+
+export const userPreferences = sqliteTable("user_preferences", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  key: text("key").notNull(),
+  value: text("value").notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  uniqueIndex("user_preferences_unique_idx").on(table.userId, table.key),
+]);
+
+export const projectNotes = sqliteTable("project_notes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  content: text("content").notNull().default(""),
+  version: integer("version").notNull().default(1),
+  createdBy: text("created_by").references(() => users.id),
+  updatedBy: text("updated_by").references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  index("project_notes_project_idx").on(table.projectId),
+]);
+
 export const auditEvents = sqliteTable("audit_events", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   occurredAt: integer("occurred_at", { mode: "timestamp_ms" }).notNull().default(now),

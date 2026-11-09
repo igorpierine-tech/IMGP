@@ -120,6 +120,13 @@
       "when": 1794614400000,
       "tag": "0016_templates_automations_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1794700800000,
+      "tag": "0017_checklists_okrs_portfolio",
+      "breakpoints": true
     }
   ]
 }
