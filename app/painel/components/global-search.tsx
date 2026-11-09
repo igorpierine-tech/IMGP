@@ -15,8 +15,10 @@ export default function GlobalSearch() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const ref = useRef<HTMLDivElement>(null);
-  const debounce = useRef<ReturnType<typeof setTimeout>>();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const debounce = useRef<ReturnType<typeof setTimeout>>(undefined);
   const router = useRouter();
 
   useEffect(() => {
@@ -25,6 +27,21 @@ export default function GlobalSearch() {
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+      if (e.key === "Escape") {
+        setOpen(false);
+        inputRef.current?.blur();
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   function search(q: string) {
@@ -43,10 +60,24 @@ export default function GlobalSearch() {
   }
 
   function navigate(item: SearchResult) {
-    setOpen(false); setQuery("");
+    setOpen(false); setQuery(""); setSelectedIndex(-1);
     if (item.type === "project") router.push(appPath(`/painel/projeto?id=${item.id}`));
     else if (item.type === "task" || item.type === "project_item") router.push(appPath("/painel/kanban"));
     else if (item.type === "demand") router.push(appPath("/painel/demandas"));
+  }
+
+  function handleKeyNav(e: React.KeyboardEvent) {
+    if (!open || results.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex((i) => (i + 1) % results.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex((i) => (i <= 0 ? results.length - 1 : i - 1));
+    } else if (e.key === "Enter" && selectedIndex >= 0) {
+      e.preventDefault();
+      navigate(results[selectedIndex]);
+    }
   }
 
   const typeIcon = (type: string) => {
@@ -65,10 +96,16 @@ export default function GlobalSearch() {
   return (
     <div className="relative" ref={ref}>
       <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-      <input type="text" value={query} onChange={(e) => search(e.target.value)}
+      <input ref={inputRef} type="text" value={query} onChange={(e) => search(e.target.value)}
         onFocus={() => { if (query.trim() && results.length > 0) setOpen(true); }}
+        onKeyDown={handleKeyNav}
         placeholder="Buscar projetos, tarefas..."
-        className="pl-9 pr-8 py-1.5 text-sm bg-gray-100 rounded-lg border-0 focus:ring-2 focus:ring-[#0c4a3e]/20 focus:bg-white w-48 lg:w-64 transition-all" />
+        className="pl-9 pr-16 py-1.5 text-sm bg-gray-100 rounded-lg border-0 focus:ring-2 focus:ring-[#0c4a3e]/20 focus:bg-white w-48 lg:w-64 transition-all" />
+      {!query && (
+        <kbd className="absolute right-2 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] text-gray-400 bg-white border border-gray-200 rounded font-mono">
+          Ctrl K
+        </kbd>
+      )}
       {query && (
         <button onClick={() => { setQuery(""); setResults([]); setOpen(false); }}
           className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
@@ -83,9 +120,10 @@ export default function GlobalSearch() {
           ) : results.length === 0 ? (
             <div className="p-4 text-sm text-gray-400">Nenhum resultado para "{query}"</div>
           ) : (
-            results.map((item) => (
+            results.map((item, idx) => (
               <button key={`${item.type}-${item.id}`} onClick={() => navigate(item)}
-                className="w-full text-left px-4 py-2.5 hover:bg-gray-50 border-b last:border-0 transition-colors flex items-center gap-3">
+                onMouseEnter={() => setSelectedIndex(idx)}
+                className={`w-full text-left px-4 py-2.5 border-b last:border-0 transition-colors flex items-center gap-3 ${idx === selectedIndex ? "bg-gray-100" : "hover:bg-gray-50"}`}>
                 {typeIcon(item.type)}
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium text-gray-900 truncate">{item.name}</div>

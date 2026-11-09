@@ -1,6 +1,8 @@
 "use client";
 
-const illustrations: Record<string, JSX.Element> = {
+import type { ReactNode } from "react";
+
+const illustrations: Record<string, ReactNode> = {
   projects: (
     <svg viewBox="0 0 120 100" fill="none" className="w-28 h-24 text-gray-300">
       <rect x="10" y="30" width="100" height="60" rx="8" stroke="currentColor" strokeWidth="2" strokeDasharray="4 3"/>

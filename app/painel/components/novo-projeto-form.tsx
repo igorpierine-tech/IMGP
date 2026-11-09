@@ -3,6 +3,7 @@
 import { useState, useEffect, FormEvent } from "react";
 import { appPath } from "@/lib/app-path";
 import FormDialog, { FormField, FormActions, inputClass, selectClass } from "./form-dialog";
+import { useFormValidation, FieldError } from "./form-validation";
 
 type ProjectType = { id: number; name: string; active: boolean };
 
@@ -25,6 +26,11 @@ export default function NovoProjetoForm({ open, onClose, onCreated }: { open: bo
   const [prioritizationDate, setPrioritizationDate] = useState("");
   const [approvingDirector, setApprovingDirector] = useState("");
 
+  const { errors: fieldErrors, validate, clearError, clearAll } = useFormValidation({
+    name: { required: true, minLength: 3, message: "Nome deve ter no mínimo 3 caracteres" },
+    projectTypeId: { required: true, message: "Selecione o tipo do projeto" },
+  });
+
   useEffect(() => {
     if (!open) return;
     fetch(appPath("/api/project-types"), { credentials: "include" })
@@ -39,13 +45,14 @@ export default function NovoProjetoForm({ open, onClose, onCreated }: { open: bo
     setName(""); setProjectTypeId(""); setCode(""); setArea(""); setManagerName("");
     setStatus("planning"); setPlannedStart(""); setPlannedEnd(""); setPlannedHours("");
     setPlannedCost(""); setPrioritized(false); setPrioritizationDate(""); setApprovingDirector("");
-    setError("");
+    setError(""); clearAll();
   }
 
   function handleClose() { reset(); onClose(); }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!validate({ name, projectTypeId })) return;
     setLoading(true);
     setError("");
     try {
@@ -83,14 +90,18 @@ export default function NovoProjetoForm({ open, onClose, onCreated }: { open: bo
         {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">{error}</div>}
 
         <FormField label="Nome do projeto" required>
-          <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} required />
+          <input value={name} onChange={(e) => { setName(e.target.value); clearError("name"); }}
+            className={`${inputClass} ${fieldErrors.name ? "border-red-300 focus:ring-red-200" : ""}`} />
+          <FieldError message={fieldErrors.name} />
         </FormField>
 
         <FormField label="Tipo do projeto" required>
-          <select value={projectTypeId} onChange={(e) => setProjectTypeId(e.target.value)} className={selectClass} required>
+          <select value={projectTypeId} onChange={(e) => { setProjectTypeId(e.target.value); clearError("projectTypeId"); }}
+            className={`${selectClass} ${fieldErrors.projectTypeId ? "border-red-300 focus:ring-red-200" : ""}`}>
             <option value="">Selecione...</option>
             {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
+          <FieldError message={fieldErrors.projectTypeId} />
         </FormField>
 
         <div className="grid grid-cols-2 gap-3">

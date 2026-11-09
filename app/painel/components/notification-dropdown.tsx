@@ -18,7 +18,7 @@ export default function NotificationDropdown() {
 
   useEffect(() => {
     fetchCount();
-    const interval = setInterval(fetchCount, 30000);
+    const interval = setInterval(fetchCount, 15000);
     return () => clearInterval(interval);
   }, []);
 

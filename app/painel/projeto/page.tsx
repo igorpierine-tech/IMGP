@@ -14,6 +14,7 @@ import CommentsSection from "../components/comments-section";
 import EditProjectForm from "../components/edit-project-form";
 import EditTarefaForm from "../components/edit-tarefa-form";
 import Breadcrumbs from "../components/breadcrumbs";
+import Attachments from "../components/attachments";
 
 type Project = {
   id: number; name: string; code?: string; area?: string; managerName?: string;
@@ -69,7 +70,7 @@ export default function ProjetoDetailPage() {
   const [phases, setPhases] = useState<Phase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<"tarefas" | "sprints" | "comentarios">("tarefas");
+  const [tab, setTab] = useState<"tarefas" | "sprints" | "comentarios" | "anexos">("tarefas");
   const [showNovaTarefa, setShowNovaTarefa] = useState(false);
   const [showNovoSprint, setShowNovoSprint] = useState(false);
   const [showEditProject, setShowEditProject] = useState(false);
@@ -185,10 +186,10 @@ export default function ProjetoDetailPage() {
 
       <div className="border-b border-gray-200">
         <div className="flex gap-6">
-          {(["tarefas", "sprints", "comentarios"] as const).map((t) => (
+          {(["tarefas", "sprints", "comentarios", "anexos"] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className={`pb-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? "border-[#0c4a3e] text-[#0c4a3e]" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
-              {t === "tarefas" ? `Tarefas (${tasks.length})` : t === "sprints" ? "Sprints" : "Comentários"}
+              {t === "tarefas" ? `Tarefas (${tasks.length})` : t === "sprints" ? "Sprints" : t === "comentarios" ? "Comentários" : "Anexos"}
             </button>
           ))}
         </div>
@@ -236,6 +237,12 @@ export default function ProjetoDetailPage() {
 
       {tab === "comentarios" && (
         <CommentsSection entityType="project" entityId={projectId} />
+      )}
+
+      {tab === "anexos" && (
+        <div className="bg-white rounded-xl border p-5">
+          <Attachments entityType="project" entityId={projectId} />
+        </div>
       )}
 
       {tab === "sprints" && (

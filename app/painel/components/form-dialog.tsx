@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 
 export default function FormDialog({
   open, onClose, title, children,
@@ -38,15 +38,19 @@ export function FormField({ label, required, children }: { label: string; requir
   );
 }
 
-export function FormActions({ onCancel, loading, label }: { onCancel: () => void; loading: boolean; label?: string }) {
+export function FormActions({ onCancel, onClose, loading, saving, label }: { onCancel?: () => void; onClose?: () => void; loading?: boolean; saving?: boolean; label?: string }) {
+  const isLoading = loading || saving || false;
+  const handleCancel = onCancel ?? onClose ?? (() => {});
   return (
     <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-2">
-      <button type="button" onClick={onCancel} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+      <button type="button" onClick={handleCancel} disabled={isLoading}
+        className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50">
         Cancelar
       </button>
-      <button type="submit" disabled={loading}
-        className="px-4 py-2 text-sm font-medium text-white bg-[#0c4a3e] hover:bg-[#0a3d33] rounded-lg transition-colors disabled:opacity-50">
-        {loading ? "Salvando..." : label ?? "Criar"}
+      <button type="submit" disabled={isLoading}
+        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0c4a3e] hover:bg-[#0a3d33] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        {isLoading && <Loader2 size={14} className="animate-spin" />}
+        {isLoading ? "Salvando..." : label ?? "Criar"}
       </button>
     </div>
   );

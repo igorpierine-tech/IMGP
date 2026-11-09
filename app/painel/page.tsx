@@ -8,6 +8,7 @@ import NovoProjetoForm from "./components/novo-projeto-form";
 import NovaDemandaForm from "./components/nova-demanda-form";
 import { SkeletonDashboard } from "./components/skeleton";
 import { useToast } from "./components/toast";
+import { HealthPieChart, TasksPieChart, AreaBarChart, ProgressAreaChart } from "./components/dashboard-charts";
 
 type DashboardData = {
   projects: { total: number; planning: number; inProgress: number; completed: number; onTrack: number; attention: number; late: number };
@@ -186,47 +187,25 @@ export default function DashboardPage() {
 
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Saúde dos projetos</h2>
-          <DonutChart size={100} segments={[
-            { value: d.projects.onTrack ?? 0, color: "#10b981", label: "No prazo" },
-            { value: d.projects.attention ?? 0, color: "#f59e0b", label: "Atenção" },
-            { value: d.projects.late ?? 0, color: "#ef4444", label: "Atrasado" },
-          ]} />
+          <HealthPieChart data={{ onTrack: d.projects.onTrack ?? 0, attention: d.projects.attention ?? 0, late: d.projects.late ?? 0 }} />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-medium text-gray-500 mb-4">Status dos projetos</h3>
-          <DonutChart segments={[
-            { value: d.projects.planning, color: "#94a3b8", label: "Planejamento" },
-            { value: d.projects.inProgress, color: "#3b82f6", label: "Em andamento" },
-            { value: d.projects.completed, color: "#10b981", label: "Concluídos" },
-          ]} />
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h3 className="text-sm font-medium text-gray-500 mb-4">Tarefas</h3>
-          <DonutChart segments={[
-            { value: d.tasks.planned, color: "#94a3b8", label: "Planejadas" },
-            { value: d.tasks.inProgress, color: "#3b82f6", label: "Em progresso" },
-            { value: d.tasks.blocked, color: "#ef4444", label: "Bloqueadas" },
-            { value: d.tasks.done, color: "#10b981", label: "Concluídas" },
-          ]} />
+          <TasksPieChart data={{ planned: d.tasks.planned, inProgress: d.tasks.inProgress, blocked: d.tasks.blocked, done: d.tasks.done }} />
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-medium text-gray-500 mb-4">Demandas</h3>
-          <DonutChart segments={[
-            { value: d.demands.triagem, color: "#94a3b8", label: "Triagem" },
-            { value: d.demands.emAnalise, color: "#3b82f6", label: "Em análise" },
-            { value: d.demands.aprovada, color: "#10b981", label: "Aprovadas" },
-            { value: d.demands.rejeitada, color: "#ef4444", label: "Rejeitadas" },
-          ]} />
+          <h3 className="text-sm font-medium text-gray-500 mb-4">Progresso dos projetos</h3>
+          <ProgressAreaChart projects={d.recentProjects} />
         </div>
       </div>
 
       {d.projectsByArea.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h3 className="text-sm font-medium text-gray-500 mb-4">Projetos por área</h3>
-          <BarChartSimple data={d.projectsByArea.slice(0, 8).map((a) => ({ label: a.area, value: a.count }))} />
+          <AreaBarChart data={d.projectsByArea} />
         </div>
       )}
     </div>

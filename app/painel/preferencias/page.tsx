@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
 import { Loader2, Save, Settings } from "lucide-react";
 import Breadcrumbs from "../components/breadcrumbs";
+import { useI18n } from "../components/i18n";
+import { useToast } from "../components/toast";
 
 const PREF_OPTIONS: { key: string; label: string; options: { value: string; label: string }[] }[] = [
   { key: "theme", label: "Tema", options: [{ value: "light", label: "Claro" }, { value: "dark", label: "Escuro" }, { value: "system", label: "Sistema" }] },
@@ -16,6 +18,8 @@ const PREF_OPTIONS: { key: string; label: string; options: { value: string; labe
 ];
 
 export default function PreferenciasPage() {
+  const { setLocale } = useI18n();
+  const { toast } = useToast();
   const [prefs, setPrefs] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,6 +49,8 @@ export default function PreferenciasPage() {
       });
       const body = await r.json() as { error?: string };
       if (!r.ok) throw new Error(body.error ?? "Erro ao salvar");
+      if (prefs.language) setLocale(prefs.language as any);
+      toast("Preferências salvas com sucesso");
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e: any) {

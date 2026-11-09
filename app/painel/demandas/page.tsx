@@ -8,6 +8,7 @@ import Breadcrumbs from "../components/breadcrumbs";
 import { SkeletonTable } from "../components/skeleton";
 import EmptyState from "../components/empty-state";
 import { useToast } from "../components/toast";
+import Pagination from "../components/pagination";
 
 type Demand = {
   id: number;
@@ -43,6 +44,8 @@ export default function DemandasPage() {
   const [filterStage, setFilterStage] = useState("");
   const [filterImpact, setFilterImpact] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "name" | "impact">("date");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   useEffect(() => {
     setLoading(true);
@@ -64,6 +67,9 @@ export default function DemandasPage() {
   if (sortBy === "name") filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
   else if (sortBy === "impact") filtered = [...filtered].sort((a, b) => (impactOrder[b.impact] ?? 0) - (impactOrder[a.impact] ?? 0));
   else filtered = [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const totalFiltered = filtered.length;
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   if (error) return <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">{error}</div>;
 
@@ -102,11 +108,10 @@ export default function DemandasPage() {
 
       {loading ? (
         <SkeletonTable rows={6} cols={6} />
-      ) : filtered.length === 0 ? (
+      ) : totalFiltered === 0 ? (
         <EmptyState icon="generic" title="Nenhuma demanda cadastrada" description="Crie demandas para acompanhar solicitações." action={{ label: "Criar primeira demanda", onClick: () => setShowNova(true) }} />
       ) : (
         <>
-          {/* Desktop table */}
           <div className="bg-white rounded-xl border overflow-hidden hidden md:block">
             <table className="w-full text-sm">
               <thead>
@@ -120,7 +125,7 @@ export default function DemandasPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((d) => (
+                {paginated.map((d) => (
                   <tr key={d.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
                     <td className="p-3 font-medium text-gray-900 max-w-[250px] truncate">{d.name}</td>
                     <td className="p-3 text-gray-600">{d.area}</td>
@@ -140,10 +145,12 @@ export default function DemandasPage() {
                 ))}
               </tbody>
             </table>
+            <div className="px-3 pb-3">
+              <Pagination currentPage={currentPage} totalItems={totalFiltered} pageSize={pageSize} onPageChange={(p) => setCurrentPage(p)} />
+            </div>
           </div>
-          {/* Mobile cards */}
           <div className="space-y-3 md:hidden">
-            {filtered.map((d) => (
+            {paginated.map((d) => (
               <div key={d.id} className="bg-white rounded-xl border p-4 space-y-2">
                 <div className="font-medium text-gray-900 text-sm">{d.name}</div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -156,6 +163,7 @@ export default function DemandasPage() {
                 </div>
               </div>
             ))}
+            <Pagination currentPage={currentPage} totalItems={totalFiltered} pageSize={pageSize} onPageChange={(p) => setCurrentPage(p)} />
           </div>
         </>
       )}

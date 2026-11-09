@@ -8,6 +8,7 @@ import Breadcrumbs from "../components/breadcrumbs";
 import { SkeletonTable } from "../components/skeleton";
 import EmptyState from "../components/empty-state";
 import { useToast } from "../components/toast";
+import Pagination from "../components/pagination";
 
 type User = {
   id: string; email: string; displayName: string; role: string;
@@ -125,6 +126,8 @@ export default function UsuariosPage() {
   const [editing, setEditing] = useState<User | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [filter, setFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   useEffect(() => {
     setLoading(true);
@@ -141,6 +144,9 @@ export default function UsuariosPage() {
   const filtered = filter
     ? users.filter((u) => u.displayName.toLowerCase().includes(filter.toLowerCase()) || u.email.toLowerCase().includes(filter.toLowerCase()) || (roleNames[u.role] ?? u.role).toLowerCase().includes(filter.toLowerCase()))
     : users;
+
+  const totalFiltered = filtered.length;
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   if (error) return <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">{error}</div>;
 
@@ -168,7 +174,7 @@ export default function UsuariosPage() {
 
       {loading ? (
         <SkeletonTable rows={5} cols={6} />
-      ) : filtered.length === 0 ? (
+      ) : totalFiltered === 0 ? (
         <EmptyState icon="generic" title="Nenhum usuário encontrado" action={{ label: "Novo Usuário", onClick: () => setShowNovo(true) }} />
       ) : (
         <>
@@ -181,7 +187,7 @@ export default function UsuariosPage() {
                 <th className="p-3 font-medium">Último acesso</th><th className="p-3 font-medium w-10"></th>
               </tr></thead>
               <tbody>
-                {filtered.map((u) => (
+                {paginated.map((u) => (
                   <tr key={u.id} className="border-b last:border-0 hover:bg-gray-50">
                     <td className="p-3">
                       <div className="flex items-center gap-2">
@@ -204,10 +210,12 @@ export default function UsuariosPage() {
                 ))}
               </tbody>
             </table>
+            <div className="px-3 pb-3">
+              <Pagination currentPage={currentPage} totalItems={totalFiltered} pageSize={pageSize} onPageChange={(p) => setCurrentPage(p)} />
+            </div>
           </div>
-          {/* Mobile cards */}
           <div className="space-y-3 md:hidden">
-            {filtered.map((u) => (
+            {paginated.map((u) => (
               <div key={u.id} className="bg-white rounded-xl border p-4">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-9 h-9 rounded-full bg-[#0c4a3e] text-white flex items-center justify-center text-sm font-medium">{u.displayName.charAt(0).toUpperCase()}</div>
@@ -225,6 +233,7 @@ export default function UsuariosPage() {
                 </div>
               </div>
             ))}
+            <Pagination currentPage={currentPage} totalItems={totalFiltered} pageSize={pageSize} onPageChange={(p) => setCurrentPage(p)} />
           </div>
         </>
       )}
