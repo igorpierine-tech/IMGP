@@ -16,7 +16,20 @@ type Epic = {
 };
 type Project = { id: number; name: string };
 
-const STATUS_OPTIONS = ["A fazer", "Em andamento", "Concluído", "Cancelado"];
+const STATUS_MAP: Record<string, string> = {
+  planned: "A fazer", in_progress: "Em andamento", blocked: "Bloqueada",
+  review: "Em revisão", done: "Concluído", cancelled: "Cancelado",
+  "A fazer": "A fazer", "Em andamento": "Em andamento", "Concluído": "Concluído",
+  "Cancelado": "Cancelado", "Bloqueada": "Bloqueada", "Em revisão": "Em revisão",
+  "Em progresso": "Em progresso", "Concluída": "Concluída",
+};
+function epicStatusLabel(s: string) { return STATUS_MAP[s] ?? s; }
+const STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "planned", label: "A fazer" },
+  { value: "in_progress", label: "Em andamento" },
+  { value: "done", label: "Concluído" },
+  { value: "cancelled", label: "Cancelado" },
+];
 const HEALTH_COLORS: Record<string, string> = {
   on_track: "bg-emerald-100 text-emerald-700",
   attention: "bg-amber-100 text-amber-700",
@@ -58,7 +71,7 @@ export default function EpicosPage() {
 
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState<number | "">("");
-  const [status, setStatus] = useState("A fazer");
+  const [status, setStatus] = useState("planned");
   const [assignedName, setAssignedName] = useState("");
   const [plannedStart, setPlannedStart] = useState("");
   const [plannedEnd, setPlannedEnd] = useState("");
@@ -84,13 +97,18 @@ export default function EpicosPage() {
   useEffect(loadEpics, [filterProject]);
 
   function openNew() {
-    setEditing(null); setName(""); setProjectId(""); setStatus("A fazer");
+    setEditing(null); setName(""); setProjectId(""); setStatus("planned");
     setAssignedName(""); setPlannedStart(""); setPlannedEnd(""); setGroupName("");
     setFormOpen(true);
   }
+  const ptToEnEpic: Record<string, string> = {
+    "A fazer": "planned", "Em andamento": "in_progress", "Em progresso": "in_progress",
+    "Bloqueada": "blocked", "Em revisão": "review", "Concluído": "done", "Concluída": "done",
+    "Cancelado": "cancelled",
+  };
   function openEdit(epic: Epic) {
     setEditing(epic); setName(epic.name); setProjectId(epic.projectId);
-    setStatus(epic.status); setAssignedName(epic.assignedName ?? "");
+    setStatus(ptToEnEpic[epic.status] ?? epic.status); setAssignedName(epic.assignedName ?? "");
     setPlannedStart(epic.plannedStart ?? ""); setPlannedEnd(epic.plannedEnd ?? "");
     setGroupName(epic.groupName ?? ""); setFormOpen(true);
   }
@@ -226,7 +244,7 @@ export default function EpicosPage() {
           </FormField>
           <FormField label="Status">
             <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
-              {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+              {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </FormField>
           <FormField label="Responsável">
@@ -252,7 +270,7 @@ function EpicsTable({ epics, onEdit, onDelete, formatDate }: {
 }) {
   const epicColumns: ColumnDef<Epic>[] = [
     { key: "name", label: "Nome", sortable: true, className: "text-left", getValue: (e) => e.name },
-    { key: "status", label: "Status", sortable: true, filterable: true, filterOptions: STATUS_OPTIONS, className: "text-center hidden md:table-cell", getValue: (e) => e.status },
+    { key: "status", label: "Status", sortable: true, filterable: true, filterOptions: STATUS_OPTIONS.map(s => s.label), className: "text-center hidden md:table-cell", getValue: (e) => epicStatusLabel(e.status) },
     { key: "health", label: "Saúde", sortable: true, filterable: true, filterOptions: ["on_track", "attention", "late"], className: "text-center hidden md:table-cell", getValue: (e) => e.health },
     { key: "assignedName", label: "Responsável", sortable: true, className: "text-left hidden lg:table-cell", getValue: (e) => e.assignedName ?? "" },
     { key: "plannedStart", label: "Início", sortable: true, className: "text-center hidden lg:table-cell", getValue: (e) => e.plannedStart ?? "" },
@@ -275,7 +293,7 @@ function EpicsTable({ epics, onEdit, onDelete, formatDate }: {
         </tr></thead>
         <tbody className="divide-y">
           {sorted.map((epic) => {
-            const sc = STATUS_COLORS[epic.status] ?? "bg-gray-100 text-gray-600";
+            const sc = STATUS_COLORS[epicStatusLabel(epic.status)] ?? "bg-gray-100 text-gray-600";
             const hc = HEALTH_COLORS[epic.health] ?? "bg-gray-100 text-gray-600";
             const hl = HEALTH_LABELS[epic.health] ?? epic.health;
             return (
@@ -285,7 +303,7 @@ function EpicsTable({ epics, onEdit, onDelete, formatDate }: {
                   {epic.groupName && <div className="text-xs text-gray-400 mt-0.5">{epic.groupName}</div>}
                 </td>
                 <td className="px-4 py-3 text-center hidden md:table-cell">
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${sc}`}>{epic.status}</span>
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${sc}`}>{epicStatusLabel(epic.status)}</span>
                 </td>
                 <td className="px-4 py-3 text-center hidden md:table-cell">
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${hc}`}>

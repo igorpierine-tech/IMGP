@@ -12,9 +12,14 @@ type Task = {
 type EpicOption = { id: number; name: string };
 type SprintOption = { id: number; name: string };
 
+const ptToEn: Record<string, string> = {
+  "A fazer": "planned", "Em progresso": "in_progress", "Bloqueada": "blocked",
+  "Em revisão": "review", "Concluída": "done",
+};
+
 export default function EditTarefaForm({ task, onClose, onSaved }: { task: Task; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState(task.name);
-  const [status, setStatus] = useState(task.status);
+  const [status, setStatus] = useState(ptToEn[task.status] ?? task.status);
   const [parentId, setParentId] = useState(task.parentId ? String(task.parentId) : "");
   const [sprintId, setSprintId] = useState(task.sprintId ? String(task.sprintId) : "");
   const [epics, setEpics] = useState<EpicOption[]>([]);
@@ -77,8 +82,8 @@ export default function EditTarefaForm({ task, onClose, onSaved }: { task: Task;
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Status">
             <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
-              <option>A fazer</option><option>Em progresso</option><option>Bloqueada</option>
-              <option>Em revisão</option><option>Concluída</option>
+              <option value="planned">A fazer</option><option value="in_progress">Em progresso</option><option value="blocked">Bloqueada</option>
+              <option value="review">Em revisão</option><option value="done">Concluída</option>
             </select>
           </FormField>
           <FormField label="Prioridade">

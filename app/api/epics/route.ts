@@ -101,7 +101,7 @@ export async function POST(request: Request) {
       kind: "epic",
       name,
       groupName: clean(body.groupName, 120) || null,
-      status: clean(body.status, 80) || "A fazer",
+      status: clean(body.status, 80) || "planned",
       assignedName: clean(body.assignedName, 180) || null,
       plannedStart: clean(body.plannedStart, 10) || null,
       plannedEnd: clean(body.plannedEnd, 10) || null,

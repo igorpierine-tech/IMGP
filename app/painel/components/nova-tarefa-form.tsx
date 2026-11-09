@@ -27,7 +27,7 @@ export default function NovaTarefaForm({
   const [sprintId, setSprintId] = useState("");
   const [name, setName] = useState("");
   const [kind, setKind] = useState<"task" | "milestone" | "subtask">("task");
-  const [status, setStatus] = useState("A fazer");
+  const [status, setStatus] = useState("planned");
   const [assignedName, setAssignedName] = useState("");
   const [plannedStart, setPlannedStart] = useState("");
   const [plannedEnd, setPlannedEnd] = useState("");
@@ -59,7 +59,7 @@ export default function NovaTarefaForm({
   function reset() {
     setProjectId(defaultProjectId ? String(defaultProjectId) : "");
     setParentId(""); setSprintId("");
-    setName(""); setKind("task"); setStatus("A fazer"); setAssignedName("");
+    setName(""); setKind("task"); setStatus("planned"); setAssignedName("");
     setPlannedStart(""); setPlannedEnd(""); setPlannedHours(""); setPriority("Média"); setError("");
   }
 
@@ -148,11 +148,11 @@ export default function NovaTarefaForm({
 
         <FormField label="Status">
           <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
-            <option value="A fazer">A fazer</option>
-            <option value="Em progresso">Em progresso</option>
-            <option value="Bloqueada">Bloqueada</option>
-            <option value="Em revisão">Em revisão</option>
-            <option value="Concluída">Concluída</option>
+            <option value="planned">A fazer</option>
+            <option value="in_progress">Em progresso</option>
+            <option value="blocked">Bloqueada</option>
+            <option value="review">Em revisão</option>
+            <option value="done">Concluída</option>
           </select>
         </FormField>
 

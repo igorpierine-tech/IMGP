@@ -47,6 +47,13 @@ const healthStyles: Record<string, { bg: string; label: string }> = {
   attention: { bg: "bg-amber-100 text-amber-700", label: "Atenção" },
   late: { bg: "bg-red-100 text-red-700", label: "Atrasado" },
 };
+const taskStatusMap: Record<string, string> = {
+  planned: "A fazer", in_progress: "Em progresso", blocked: "Bloqueada",
+  review: "Em revisão", done: "Concluída",
+  "A fazer": "A fazer", "Em progresso": "Em progresso", "Bloqueada": "Bloqueada",
+  "Em revisão": "Em revisão", "Concluída": "Concluída",
+};
+function statusLabel(s: string) { return taskStatusMap[s] ?? s; }
 const taskStatusStyles: Record<string, string> = {
   "A fazer": "bg-gray-100 text-gray-600", "Em progresso": "bg-blue-100 text-blue-700",
   "Bloqueada": "bg-red-100 text-red-700", "Em revisão": "bg-purple-100 text-purple-700",
@@ -131,13 +138,13 @@ export default function ProjetoDetailPage() {
   const allItems = tasks;
   const epics = allItems.filter((t) => t.kind === "epic");
   const nonEpics = allItems.filter((t) => t.kind !== "epic");
-  const doneTasks = nonEpics.filter((t) => t.status === "Concluída").length;
+  const doneTasks = nonEpics.filter((t) => statusLabel(t.status) === "Concluída").length;
   const totalHours = nonEpics.reduce((s, t) => s + (t.plannedHours ?? 0), 0);
 
   const taskColumns: ColumnDef<TaskItem>[] = [
     { key: "name", label: "Tarefa", sortable: true, getValue: (r) => r.name },
     { key: "kind", label: "Tipo", sortable: true, filterable: true, filterOptions: ["epic", "task", "subtask", "milestone"], getValue: (r) => r.kind },
-    { key: "status", label: "Status", sortable: true, filterable: true, filterOptions: ["A fazer", "Em progresso", "Bloqueada", "Em revisão", "Concluída"], getValue: (r) => r.status },
+    { key: "status", label: "Status", sortable: true, filterable: true, filterOptions: ["A fazer", "Em progresso", "Bloqueada", "Em revisão", "Concluída"], getValue: (r) => statusLabel(r.status) },
     { key: "assignedName", label: "Responsável", sortable: true, getValue: (r) => r.assignedName ?? "" },
     { key: "plannedHours", label: "Horas", sortable: true, getValue: (r) => r.plannedHours },
     { key: "plannedEnd", label: "Prazo", sortable: true, getValue: (r) => r.plannedEnd ?? "" },
@@ -343,7 +350,7 @@ function TaskSection({ section, si, taskStatusStyles, formatDate, onEdit, onDele
             <span className="text-xs font-normal text-gray-400 ml-1">({section.tasks.length} tarefas)</span>
           </td>
           <td className="p-3 text-gray-500 text-xs">Épico</td>
-          <td className="p-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${taskStatusStyles[epicRow.status] ?? "bg-gray-100 text-gray-600"}`}>{epicRow.status}</span></td>
+          <td className="p-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${taskStatusStyles[statusLabel(epicRow.status)] ?? "bg-gray-100 text-gray-600"}`}>{statusLabel(epicRow.status)}</span></td>
           <td className="p-3 text-gray-600">{epicRow.assignedName ?? "—"}</td>
           <td className="p-3 text-gray-600">{epicRow.plannedHours ?? 0}h</td>
           <td className="p-3 text-gray-400 text-xs">{formatDate(epicRow.plannedEnd)}</td>
@@ -363,7 +370,7 @@ function TaskSection({ section, si, taskStatusStyles, formatDate, onEdit, onDele
         <tr key={t.id} className="border-b last:border-0 hover:bg-gray-50">
           <td className={`p-3 font-medium text-gray-900 max-w-[200px] truncate ${epicRow ? "pl-9" : ""}`}>{t.name}</td>
           <td className="p-3 text-gray-500 capitalize">{t.kind}</td>
-          <td className="p-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${taskStatusStyles[t.status] ?? "bg-gray-100 text-gray-600"}`}>{t.status}</span></td>
+          <td className="p-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${taskStatusStyles[statusLabel(t.status)] ?? "bg-gray-100 text-gray-600"}`}>{statusLabel(t.status)}</span></td>
           <td className="p-3 text-gray-600">{t.assignedName ?? "—"}</td>
           <td className="p-3 text-gray-600">{t.plannedHours ?? 0}h</td>
           <td className="p-3 text-gray-400 text-xs">{formatDate(t.plannedEnd)}</td>
