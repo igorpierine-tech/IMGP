@@ -6,6 +6,7 @@ import { Loader2, Plus, Pencil, Trash2, Zap, ToggleLeft, ToggleRight } from "luc
 import Breadcrumbs from "../components/breadcrumbs";
 import FormDialog, { FormField, FormActions, inputClass, selectClass } from "../components/form-dialog";
 import { useToast } from "../components/toast";
+import { SortableHeader, useSortableTable, type ColumnDef } from "../components/sortable-header";
 
 type Rule = { id: number; name: string; description: string | null; triggerEvent: string; triggerConditionsJson: any; actionType: string; actionConfigJson: any; active: boolean; executionCount: number; lastExecutedAt: string | null };
 
@@ -103,6 +104,16 @@ export default function AutomacoesPage() {
     } catch (err: any) { setError(err.message); }
   }
 
+  const ruleColumns: ColumnDef<Rule>[] = [
+    { key: "name", label: "Nome", sortable: true, getValue: (r) => r.name },
+    { key: "triggerEvent", label: "Gatilho", sortable: true, className: "hidden sm:table-cell", getValue: (r) => TRIGGER_LABELS[r.triggerEvent] ?? r.triggerEvent },
+    { key: "actionType", label: "Ação", sortable: true, className: "hidden md:table-cell", getValue: (r) => ACTION_LABELS[r.actionType] ?? r.actionType },
+    { key: "executionCount", label: "Execuções", sortable: true, className: "text-center", getValue: (r) => r.executionCount },
+    { key: "active", label: "Status", sortable: true, filterable: true, filterOptions: ["Ativo", "Inativo"], className: "text-center", getValue: (r) => r.active ? "Ativo" : "Inativo" },
+  ];
+  const { toggleSort, setFilter: setColFilter, getSortDir, filters: colFilters, sortAndFilter } = useSortableTable<Rule>(items);
+  const sorted = sortAndFilter(items, ruleColumns);
+
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando...</div>;
 
   return (
@@ -123,15 +134,15 @@ export default function AutomacoesPage() {
       <div className="bg-white rounded-xl border border-gray-200/60 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b"><tr>
-            <th className="text-left px-4 py-3 font-medium text-gray-500">Nome</th>
-            <th className="text-left px-4 py-3 font-medium text-gray-500 hidden sm:table-cell">Gatilho</th>
-            <th className="text-left px-4 py-3 font-medium text-gray-500 hidden md:table-cell">Ação</th>
-            <th className="text-center px-4 py-3 font-medium text-gray-500 w-24">Execuções</th>
-            <th className="text-center px-4 py-3 font-medium text-gray-500 w-20">Status</th>
+            {ruleColumns.map((col) => (
+              <SortableHeader key={col.key} label={col.label} sortDir={getSortDir(col.key)} onSort={() => toggleSort(col.key)}
+                sortable={col.sortable} filterable={col.filterable} filterOptions={col.filterOptions}
+                filterValue={colFilters[col.key] ?? ""} onFilter={(v) => setColFilter(col.key, v)} className={col.className ?? ""} />
+            ))}
             <th className="w-20"></th>
           </tr></thead>
           <tbody className="divide-y">
-            {items.map((item) => (
+            {sorted.map((item) => (
               <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3">
                   <div className="font-medium text-gray-900">{item.name}</div>

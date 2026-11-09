@@ -6,6 +6,7 @@ import { Loader2, Plus, Pencil, Trash2, Tag } from "lucide-react";
 import Breadcrumbs from "../components/breadcrumbs";
 import FormDialog, { FormField, FormActions, inputClass } from "../components/form-dialog";
 import { useToast } from "../components/toast";
+import { SortableHeader, useSortableTable, type ColumnDef } from "../components/sortable-header";
 
 type TagItem = { id: number; name: string; color: string | null; description: string | null };
 
@@ -66,6 +67,14 @@ export default function TagsPage() {
     } catch (err: any) { setError(err.message); }
   }
 
+  const tagColumns: ColumnDef<TagItem>[] = [
+    { key: "color", label: "Cor", sortable: false },
+    { key: "name", label: "Nome", sortable: true, getValue: (t) => t.name },
+    { key: "description", label: "Descrição", sortable: true, className: "hidden sm:table-cell", getValue: (t) => t.description ?? "" },
+  ];
+  const { toggleSort, getSortDir, sortAndFilter } = useSortableTable<TagItem>(items);
+  const sorted = sortAndFilter(items, tagColumns);
+
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando...</div>;
 
   return (
@@ -86,13 +95,14 @@ export default function TagsPage() {
       <div className="bg-white rounded-xl border border-gray-200/60 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b"><tr>
-            <th className="text-left px-4 py-3 font-medium text-gray-500">Cor</th>
-            <th className="text-left px-4 py-3 font-medium text-gray-500">Nome</th>
-            <th className="text-left px-4 py-3 font-medium text-gray-500 hidden sm:table-cell">Descrição</th>
+            {tagColumns.map((col) => (
+              <SortableHeader key={col.key} label={col.label} sortDir={getSortDir(col.key)} onSort={() => toggleSort(col.key)}
+                sortable={col.sortable} className={col.className ?? ""} />
+            ))}
             <th className="w-20"></th>
           </tr></thead>
           <tbody className="divide-y">
-            {items.map((item) => (
+            {sorted.map((item) => (
               <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 w-16">
                   <div className="w-6 h-6 rounded-full border border-gray-200" style={{ backgroundColor: item.color ?? "#ccc" }} />

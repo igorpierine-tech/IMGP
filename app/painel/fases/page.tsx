@@ -6,6 +6,7 @@ import { Loader2, Plus, Pencil, Trash2, GitBranch } from "lucide-react";
 import Breadcrumbs from "../components/breadcrumbs";
 import FormDialog, { FormField, FormActions, inputClass, selectClass } from "../components/form-dialog";
 import { useToast } from "../components/toast";
+import { SortableHeader, useSortableTable, type ColumnDef } from "../components/sortable-header";
 
 type Phase = { id: number; projectRef: string; projectName: string; name: string; description: string | null; sequence: number; active: boolean };
 
@@ -68,9 +69,18 @@ export default function FasesPage() {
     } catch (err: any) { setError(err.message); }
   }
 
+  const phaseColumns: ColumnDef<Phase>[] = [
+    { key: "name", label: "Nome", sortable: true, getValue: (p) => p.name },
+    { key: "description", label: "Descrição", sortable: true, className: "hidden sm:table-cell", getValue: (p) => p.description ?? "" },
+    { key: "sequence", label: "Seq.", sortable: true, className: "text-center", getValue: (p) => p.sequence },
+    { key: "active", label: "Status", sortable: true, filterable: true, filterOptions: ["Ativo", "Inativo"], className: "text-center", getValue: (p) => p.active ? "Ativo" : "Inativo" },
+  ];
+  const { toggleSort, setFilter, getSortDir, filters, sortAndFilter } = useSortableTable<Phase>(items);
+  const sorted = sortAndFilter(items, phaseColumns);
+
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando...</div>;
 
-  const grouped = items.reduce<Record<string, Phase[]>>((acc, p) => { (acc[p.projectName] ??= []).push(p); return acc; }, {});
+  const grouped = sorted.reduce<Record<string, Phase[]>>((acc, p) => { (acc[p.projectName] ??= []).push(p); return acc; }, {});
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -93,6 +103,14 @@ export default function FasesPage() {
         <div key={proj} className="bg-white rounded-xl border border-gray-200/60 shadow-sm overflow-hidden">
           <div className="px-4 py-3 bg-gray-50 border-b font-medium text-gray-700 text-sm">{proj}</div>
           <table className="w-full text-sm">
+            <thead className="bg-gray-50/50 border-b"><tr>
+              {phaseColumns.map((col) => (
+                <SortableHeader key={col.key} label={col.label} sortDir={getSortDir(col.key)} onSort={() => toggleSort(col.key)}
+                  sortable={col.sortable} filterable={col.filterable} filterOptions={col.filterOptions}
+                  filterValue={filters[col.key] ?? ""} onFilter={(v) => setFilter(col.key, v)} className={col.className ?? ""} />
+              ))}
+              <th className="w-16"></th>
+            </tr></thead>
             <tbody className="divide-y">
               {phases.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50 transition-colors">

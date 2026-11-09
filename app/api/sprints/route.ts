@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { projectPhases, projects, sprints } from "@/db/schema";
 import { HttpError } from "@/lib/server/authz";
 import { errorMessage } from "@/lib/server/errors";
@@ -6,6 +6,19 @@ import { writeAudit } from "@/lib/server/audit";
 import { getApiContext, checkPermissionOrRole } from "@/lib/server/api-context";
 
 const editors = ["project_coordinator", "it_director", "project_analyst"] as const;
+
+export async function GET(request: Request) {
+  try {
+    const ctx = await getApiContext(request);
+    const url = new URL(request.url);
+    const projectId = Number(url.searchParams.get("projectId"));
+    if (!projectId) throw new HttpError(400, "projectId é obrigatório.");
+    const rows = await ctx.db.select().from(sprints).where(eq(sprints.projectId, projectId)).orderBy(desc(sprints.createdAt));
+    return Response.json({ sprints: rows });
+  } catch (error) {
+    return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
+  }
+}
 
 export async function POST(request: Request) {
   try {

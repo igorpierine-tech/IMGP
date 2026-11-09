@@ -6,6 +6,7 @@ import { Loader2, Plus, Pencil, Trash2, Layers, ChevronDown, ListTree } from "lu
 import Breadcrumbs from "../components/breadcrumbs";
 import FormDialog, { FormField, FormActions, inputClass, selectClass } from "../components/form-dialog";
 import { useToast } from "../components/toast";
+import { SortableHeader, useSortableTable, type ColumnDef } from "../components/sortable-header";
 
 type Epic = {
   id: number; projectId: number; projectName?: string; name: string;
@@ -249,21 +250,31 @@ export default function EpicosPage() {
 function EpicsTable({ epics, onEdit, onDelete, formatDate }: {
   epics: Epic[]; onEdit: (e: Epic) => void; onDelete: (e: Epic) => void; formatDate: (d: string | null) => string;
 }) {
+  const epicColumns: ColumnDef<Epic>[] = [
+    { key: "name", label: "Nome", sortable: true, className: "text-left", getValue: (e) => e.name },
+    { key: "status", label: "Status", sortable: true, filterable: true, filterOptions: STATUS_OPTIONS, className: "text-center hidden md:table-cell", getValue: (e) => e.status },
+    { key: "health", label: "Saúde", sortable: true, filterable: true, filterOptions: ["on_track", "attention", "late"], className: "text-center hidden md:table-cell", getValue: (e) => e.health },
+    { key: "assignedName", label: "Responsável", sortable: true, className: "text-left hidden lg:table-cell", getValue: (e) => e.assignedName ?? "" },
+    { key: "plannedStart", label: "Início", sortable: true, className: "text-center hidden lg:table-cell", getValue: (e) => e.plannedStart ?? "" },
+    { key: "plannedEnd", label: "Término", sortable: true, className: "text-center hidden lg:table-cell", getValue: (e) => e.plannedEnd ?? "" },
+    { key: "childCount", label: "Tarefas", sortable: true, className: "text-center", getValue: (e) => e.childCount },
+  ];
+  const { toggleSort, setFilter, getSortDir, filters, sortAndFilter } = useSortableTable<Epic>(epics);
+  const sorted = sortAndFilter(epics, epicColumns);
+
   return (
     <div className="bg-white rounded-xl border border-gray-200/60 shadow-sm overflow-hidden mb-4">
       <table className="w-full text-sm">
         <thead className="bg-gray-50 border-b"><tr>
-          <th className="text-left px-4 py-3 font-medium text-gray-500">Nome</th>
-          <th className="text-center px-4 py-3 font-medium text-gray-500 hidden md:table-cell">Status</th>
-          <th className="text-center px-4 py-3 font-medium text-gray-500 hidden md:table-cell">Saúde</th>
-          <th className="text-left px-4 py-3 font-medium text-gray-500 hidden lg:table-cell">Responsável</th>
-          <th className="text-center px-4 py-3 font-medium text-gray-500 hidden lg:table-cell">Início</th>
-          <th className="text-center px-4 py-3 font-medium text-gray-500 hidden lg:table-cell">Término</th>
-          <th className="text-center px-4 py-3 font-medium text-gray-500">Tarefas</th>
+          {epicColumns.map((col) => (
+            <SortableHeader key={col.key} label={col.label} sortDir={getSortDir(col.key)} onSort={() => toggleSort(col.key)}
+              sortable={col.sortable} filterable={col.filterable} filterOptions={col.filterOptions}
+              filterValue={filters[col.key] ?? ""} onFilter={(v) => setFilter(col.key, v)} className={col.className ?? ""} />
+          ))}
           <th className="w-20"></th>
         </tr></thead>
         <tbody className="divide-y">
-          {epics.map((epic) => {
+          {sorted.map((epic) => {
             const sc = STATUS_COLORS[epic.status] ?? "bg-gray-100 text-gray-600";
             const hc = HEALTH_COLORS[epic.health] ?? "bg-gray-100 text-gray-600";
             const hl = HEALTH_LABELS[epic.health] ?? epic.health;

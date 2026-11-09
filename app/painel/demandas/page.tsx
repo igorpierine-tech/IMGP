@@ -5,6 +5,7 @@ import { appPath } from "@/lib/app-path";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import NovaDemandaForm from "../components/nova-demanda-form";
 import Breadcrumbs from "../components/breadcrumbs";
+import { SortableHeader, useSortableTable, type ColumnDef } from "../components/sortable-header";
 import { SkeletonTable } from "../components/skeleton";
 import EmptyState from "../components/empty-state";
 import { useToast } from "../components/toast";
@@ -68,11 +69,18 @@ export default function DemandasPage() {
   const [showNova, setShowNova] = useState(false);
   const [editingDemand, setEditingDemand] = useState<Demand | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [filterStage, setFilterStage] = useState("");
-  const [filterImpact, setFilterImpact] = useState("");
-  const [sortBy, setSortBy] = useState<"date" | "name" | "impact">("date");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
+
+  const demandColumns: ColumnDef<Demand>[] = [
+    { key: "name", label: "Título", sortable: true, getValue: (d) => d.name },
+    { key: "area", label: "Área", sortable: true, filterable: true, filterOptions: [...new Set(demands.map(d => d.area))].sort(), getValue: (d) => d.area },
+    { key: "stage", label: "Estágio", sortable: true, filterable: true, filterOptions: ["Triagem", "Em Análise", "Aprovada", "Rejeitada", "Concluída"], getValue: (d) => d.stage },
+    { key: "impact", label: "Impacto", sortable: true, filterable: true, filterOptions: ["Baixo", "Médio", "Alto"], getValue: (d) => d.impact },
+    { key: "requesterName", label: "Solicitante", sortable: true, getValue: (d) => d.requesterName ?? "" },
+    { key: "createdAt", label: "Data", sortable: true, getValue: (d) => new Date(d.createdAt).getTime() },
+  ];
+  const { toggleSort, setFilter, getSortDir, filters, sortAndFilter } = useSortableTable<Demand>(demands, "createdAt", "desc");
 
   useEffect(() => {
     setLoading(true);
@@ -101,14 +109,7 @@ export default function DemandasPage() {
     } catch (err) { setError(err instanceof Error ? err.message : "Erro"); }
   }
 
-  const impactOrder: Record<string, number> = { "Alto": 3, "Médio": 2, "Baixo": 1 };
-
-  let filtered = demands;
-  if (filterStage) filtered = filtered.filter((d) => d.stage === filterStage);
-  if (filterImpact) filtered = filtered.filter((d) => d.impact === filterImpact);
-  if (sortBy === "name") filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
-  else if (sortBy === "impact") filtered = [...filtered].sort((a, b) => (impactOrder[b.impact] ?? 0) - (impactOrder[a.impact] ?? 0));
-  else filtered = [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const filtered = sortAndFilter(demands, demandColumns);
 
   const totalFiltered = filtered.length;
   const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -131,23 +132,6 @@ export default function DemandasPage() {
 
       <NovaDemandaForm open={showNova} onClose={() => { setShowNova(false); setEditingDemand(null); }} editing={editingDemand} onCreated={() => { setRefreshKey((k) => k + 1); toast(editingDemand ? "Demanda atualizada" : "Demanda criada com sucesso"); setEditingDemand(null); }} />
 
-      <div className="flex flex-wrap gap-3">
-        <select value={filterStage} onChange={(e) => setFilterStage(e.target.value)}
-          className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0c4a3e]/20 outline-none">
-          <option value="">Todos os estágios</option>
-          <option>Triagem</option><option>Em Análise</option><option>Aprovada</option><option>Rejeitada</option><option>Concluída</option>
-        </select>
-        <select value={filterImpact} onChange={(e) => setFilterImpact(e.target.value)}
-          className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0c4a3e]/20 outline-none">
-          <option value="">Todos os impactos</option>
-          <option>Baixo</option><option>Médio</option><option>Alto</option>
-        </select>
-        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}
-          className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0c4a3e]/20 outline-none">
-          <option value="date">Mais recentes</option><option value="name">Nome A-Z</option><option value="impact">Maior impacto</option>
-        </select>
-      </div>
-
       {loading ? (
         <SkeletonTable rows={6} cols={6} />
       ) : totalFiltered === 0 ? (
@@ -157,14 +141,13 @@ export default function DemandasPage() {
           <div className="bg-white rounded-xl border overflow-hidden hidden md:block">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-gray-50 text-gray-500 text-left">
-                  <th className="p-3 font-medium">Título</th>
-                  <th className="p-3 font-medium">Área</th>
-                  <th className="p-3 font-medium">Estágio</th>
-                  <th className="p-3 font-medium">Impacto</th>
-                  <th className="p-3 font-medium">Solicitante</th>
-                  <th className="p-3 font-medium">Data</th>
-                  <th className="p-3 font-medium w-20"></th>
+                <tr className="border-b bg-gray-50 text-left">
+                  {demandColumns.map((col) => (
+                    <SortableHeader key={col.key} label={col.label} sortDir={getSortDir(col.key)} onSort={() => toggleSort(col.key)}
+                      sortable={col.sortable} filterable={col.filterable} filterOptions={col.filterOptions}
+                      filterValue={filters[col.key] ?? ""} onFilter={(v) => setFilter(col.key, v)} />
+                  ))}
+                  <th className="p-3 font-medium text-gray-500 w-20"></th>
                 </tr>
               </thead>
               <tbody>

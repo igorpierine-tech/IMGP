@@ -7,6 +7,7 @@ import Breadcrumbs from "../components/breadcrumbs";
 import FormDialog, { FormField, FormActions, inputClass } from "../components/form-dialog";
 import { useToast } from "../components/toast";
 import ConfirmDialog from "../components/confirm-dialog";
+import { SortableHeader, useSortableTable, type ColumnDef } from "../components/sortable-header";
 
 type ProjectType = { id: number; name: string; description: string | null; sequence: number; active: boolean };
 
@@ -65,6 +66,15 @@ export default function TiposProjetoPage() {
     } catch (err: any) { setError(err.message); }
   }
 
+  const ptColumns: ColumnDef<ProjectType>[] = [
+    { key: "name", label: "Nome", sortable: true, getValue: (t) => t.name },
+    { key: "description", label: "Descrição", sortable: true, className: "hidden sm:table-cell", getValue: (t) => t.description ?? "" },
+    { key: "sequence", label: "Ordem", sortable: true, className: "text-center", getValue: (t) => t.sequence },
+    { key: "active", label: "Status", sortable: true, filterable: true, filterOptions: ["Ativo", "Inativo"], className: "text-center", getValue: (t) => t.active ? "Ativo" : "Inativo" },
+  ];
+  const { toggleSort, setFilter, getSortDir, filters, sortAndFilter } = useSortableTable<ProjectType>(items);
+  const sorted = sortAndFilter(items, ptColumns);
+
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando...</div>;
 
   return (
@@ -85,14 +95,15 @@ export default function TiposProjetoPage() {
       <div className="bg-white rounded-xl border border-gray-200/60 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b"><tr>
-            <th className="text-left px-4 py-3 font-medium text-gray-500">Nome</th>
-            <th className="text-left px-4 py-3 font-medium text-gray-500 hidden sm:table-cell">Descrição</th>
-            <th className="text-center px-4 py-3 font-medium text-gray-500 w-20">Ordem</th>
-            <th className="text-center px-4 py-3 font-medium text-gray-500 w-20">Status</th>
+            {ptColumns.map((col) => (
+              <SortableHeader key={col.key} label={col.label} sortDir={getSortDir(col.key)} onSort={() => toggleSort(col.key)}
+                sortable={col.sortable} filterable={col.filterable} filterOptions={col.filterOptions}
+                filterValue={filters[col.key] ?? ""} onFilter={(v) => setFilter(col.key, v)} className={col.className ?? ""} />
+            ))}
             <th className="w-12"></th>
           </tr></thead>
           <tbody className="divide-y">
-            {items.map((item) => (
+            {sorted.map((item) => (
               <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 font-medium text-gray-900">{item.name}</td>
                 <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{item.description || "—"}</td>

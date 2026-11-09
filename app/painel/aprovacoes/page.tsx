@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
 import { Loader2, ShieldCheck, Clock, CheckCircle2, XCircle } from "lucide-react";
 import Breadcrumbs from "../components/breadcrumbs";
+import { SortableHeader, useSortableTable, type ColumnDef } from "../components/sortable-header";
 
 type ApprovalRequest = { id: number; chainId: number; entityType: string; entityId: number; currentStep: number; status: string; requestedBy: string; createdAt: string };
 type Chain = { id: number; name: string; entityType: string; stepsJson: string; active: boolean };
@@ -37,6 +38,17 @@ export default function AprovacoesPage() {
 
   const statusLabel: Record<string, string> = { pending: "Pendente", approved: "Aprovada", rejected: "Rejeitada" };
 
+  const apColumns: ColumnDef<ApprovalRequest>[] = [
+    { key: "id", label: "ID", sortable: true, getValue: (r) => r.id },
+    { key: "entityType", label: "Tipo", sortable: true, filterable: true, filterOptions: [...new Set(pending.map(r => r.entityType))].sort(), getValue: (r) => r.entityType },
+    { key: "entityId", label: "Entidade", sortable: true, getValue: (r) => r.entityId },
+    { key: "currentStep", label: "Etapa", sortable: true, getValue: (r) => r.currentStep },
+    { key: "status", label: "Status", sortable: true, filterable: true, filterOptions: ["pending", "approved", "rejected"], getValue: (r) => r.status },
+    { key: "createdAt", label: "Criado em", sortable: true, getValue: (r) => new Date(r.createdAt).getTime() },
+  ];
+  const { toggleSort, setFilter: setColFilter, getSortDir, filters: colFilters, sortAndFilter } = useSortableTable<ApprovalRequest>(pending);
+  const sortedPending = sortAndFilter(pending, apColumns);
+
   return (
     <div className="space-y-6">
       <Breadcrumbs items={[{ label: "Aprovações" }]} />
@@ -56,9 +68,15 @@ export default function AprovacoesPage() {
             <div className="p-12 text-center"><ShieldCheck size={40} className="text-gray-300 mx-auto mb-3" /><p className="text-sm text-gray-400">Nenhuma aprovação pendente.</p></div>
           ) : (
             <table className="w-full text-sm">
-              <thead><tr className="border-b text-gray-500 text-left"><th className="p-3">ID</th><th className="p-3">Tipo</th><th className="p-3">Entidade</th><th className="p-3">Etapa</th><th className="p-3">Status</th><th className="p-3">Criado em</th></tr></thead>
+              <thead><tr className="border-b text-left">
+                {apColumns.map((col) => (
+                  <SortableHeader key={col.key} label={col.label} sortDir={getSortDir(col.key)} onSort={() => toggleSort(col.key)}
+                    sortable={col.sortable} filterable={col.filterable} filterOptions={col.filterOptions}
+                    filterValue={colFilters[col.key] ?? ""} onFilter={(v) => setColFilter(col.key, v)} />
+                ))}
+              </tr></thead>
               <tbody>
-                {pending.map((req) => (
+                {sortedPending.map((req) => (
                   <tr key={req.id} className="border-b last:border-0 hover:bg-gray-50">
                     <td className="p-3 font-medium">#{req.id}</td>
                     <td className="p-3 text-gray-600">{req.entityType}</td>

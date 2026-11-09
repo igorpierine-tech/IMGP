@@ -9,6 +9,7 @@ import { SkeletonTable } from "../components/skeleton";
 import EmptyState from "../components/empty-state";
 import { useToast } from "../components/toast";
 import Pagination from "../components/pagination";
+import { SortableHeader, useSortableTable, type ColumnDef } from "../components/sortable-header";
 
 type User = {
   id: string; email: string; displayName: string; role: string;
@@ -141,9 +142,19 @@ export default function UsuariosPage() {
       .finally(() => setLoading(false));
   }, [refreshKey]);
 
-  const filtered = filter
+  const userColumns: ColumnDef<User>[] = [
+    { key: "displayName", label: "Nome", sortable: true, getValue: (u) => u.displayName },
+    { key: "email", label: "E-mail", sortable: true, getValue: (u) => u.email },
+    { key: "role", label: "Perfil", sortable: true, filterable: true, filterOptions: Object.values(roleNames), getValue: (u) => roleNames[u.role] ?? u.role },
+    { key: "active", label: "Status", sortable: true, filterable: true, filterOptions: ["Ativo", "Inativo"], getValue: (u) => u.active ? "Ativo" : "Inativo" },
+    { key: "lastSeenAt", label: "Último acesso", sortable: true, getValue: (u) => u.lastSeenAt ? new Date(u.lastSeenAt).getTime() : 0 },
+  ];
+  const { toggleSort, setFilter: setColFilter, getSortDir, filters: colFilters, sortAndFilter } = useSortableTable<User>(users);
+
+  let textFiltered = filter
     ? users.filter((u) => u.displayName.toLowerCase().includes(filter.toLowerCase()) || u.email.toLowerCase().includes(filter.toLowerCase()) || (roleNames[u.role] ?? u.role).toLowerCase().includes(filter.toLowerCase()))
     : users;
+  const filtered = sortAndFilter(textFiltered, userColumns);
 
   const totalFiltered = filtered.length;
   const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -181,10 +192,13 @@ export default function UsuariosPage() {
           {/* Desktop table */}
           <div className="bg-white rounded-xl border overflow-hidden hidden md:block">
             <table className="w-full text-sm">
-              <thead><tr className="border-b bg-gray-50 text-gray-500 text-left">
-                <th className="p-3 font-medium">Nome</th><th className="p-3 font-medium">E-mail</th>
-                <th className="p-3 font-medium">Perfil</th><th className="p-3 font-medium">Status</th>
-                <th className="p-3 font-medium">Último acesso</th><th className="p-3 font-medium w-10"></th>
+              <thead><tr className="border-b bg-gray-50 text-left">
+                {userColumns.map((col) => (
+                  <SortableHeader key={col.key} label={col.label} sortDir={getSortDir(col.key)} onSort={() => toggleSort(col.key)}
+                    sortable={col.sortable} filterable={col.filterable} filterOptions={col.filterOptions}
+                    filterValue={colFilters[col.key] ?? ""} onFilter={(v) => setColFilter(col.key, v)} />
+                ))}
+                <th className="p-3 font-medium text-gray-500 w-10"></th>
               </tr></thead>
               <tbody>
                 {paginated.map((u) => (

@@ -41,6 +41,24 @@ export async function PATCH(request: Request) {
   }
 }
 
+export async function DELETE(request: Request) {
+  try {
+    assertSameOrigin(request);
+    const ctx = await getApiContext(request);
+    checkPermissionOrRole(ctx, "projects:delete", editors);
+    const body = await request.json() as Record<string, unknown>;
+    const id = positiveInteger(body.id);
+    if (!id) throw new HttpError(400, "Tarefa ou marco não informado.");
+    const [before] = await ctx.db.select().from(projectItems).where(eq(projectItems.id, id)).limit(1);
+    if (!before) throw new HttpError(404, "Tarefa ou marco não encontrado.");
+    await ctx.db.delete(projectItems).where(eq(projectItems.id, id));
+    await writeAudit({ actor: ctx.user, action: "project_item.deleted", entityType: "project_item", entityId: id, requestId: request.headers.get("cf-ray"), before, db: ctx.db });
+    return Response.json({ ok: true });
+  } catch (error) {
+    return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function validatedValues(body: Record<string, unknown>, fallbackProjectId: number | undefined, db: any) {
   const projectId = positiveInteger(body.projectId) || fallbackProjectId;

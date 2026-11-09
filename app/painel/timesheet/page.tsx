@@ -6,6 +6,7 @@ import { Loader2, Play, Pause, Square, Clock, Timer, Pencil, Trash2 } from "luci
 import FormDialog, { FormField, FormActions, inputClass } from "../components/form-dialog";
 import Breadcrumbs from "../components/breadcrumbs";
 import { useToast } from "../components/toast";
+import { SortableHeader, useSortableTable, type ColumnDef } from "../components/sortable-header";
 
 type TimeEntry = { id: number; projectId: number; itemId: number; userId: string; activity: string; startedAt: string; endedAt: string | null; totalMinutes: number; status: string; pausedSeconds: number };
 
@@ -120,6 +121,17 @@ export default function TimesheetPage() {
   const totalToday = entries.filter(e => e.status === "closed" && e.endedAt && formatDate(e.endedAt) === formatDate(new Date().toISOString())).reduce((s, e) => s + e.totalMinutes, 0);
   const totalWeek = entries.filter(e => e.status === "closed").reduce((s, e) => s + e.totalMinutes, 0);
 
+  const tsColumns: ColumnDef<TimeEntry>[] = [
+    { key: "activity", label: "Atividade", sortable: true, getValue: (e) => e.activity },
+    { key: "date", label: "Data", sortable: true, getValue: (e) => new Date(e.startedAt).getTime() },
+    { key: "start", label: "Início", sortable: false },
+    { key: "end", label: "Fim", sortable: false },
+    { key: "duration", label: "Duração", sortable: true, getValue: (e) => e.totalMinutes },
+    { key: "status", label: "Status", sortable: true, filterable: true, filterOptions: ["running", "paused", "closed"], getValue: (e) => e.status },
+  ];
+  const { toggleSort, setFilter: setColFilter, getSortDir, filters: colFilters, sortAndFilter } = useSortableTable<TimeEntry>(entries, "date", "desc");
+  const sortedEntries = sortAndFilter(entries, tsColumns);
+
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando...</div>;
 
   return (
@@ -191,16 +203,15 @@ export default function TimesheetPage() {
         <div className="px-4 py-3 border-b bg-gray-50 text-sm font-medium text-gray-700">Últimos apontamentos</div>
         <table className="w-full text-sm">
           <thead className="border-b"><tr>
-            <th className="text-left px-4 py-2 font-medium text-gray-400 text-xs">Atividade</th>
-            <th className="text-center px-4 py-2 font-medium text-gray-400 text-xs">Data</th>
-            <th className="text-center px-4 py-2 font-medium text-gray-400 text-xs">Início</th>
-            <th className="text-center px-4 py-2 font-medium text-gray-400 text-xs">Fim</th>
-            <th className="text-center px-4 py-2 font-medium text-gray-400 text-xs">Duração</th>
-            <th className="text-center px-4 py-2 font-medium text-gray-400 text-xs">Status</th>
+            {tsColumns.map((col) => (
+              <SortableHeader key={col.key} label={col.label} sortDir={getSortDir(col.key)} onSort={() => toggleSort(col.key)}
+                sortable={col.sortable} filterable={col.filterable} filterOptions={col.filterOptions}
+                filterValue={colFilters[col.key] ?? ""} onFilter={(v) => setColFilter(col.key, v)} className="text-center" />
+            ))}
             <th className="w-16"></th>
           </tr></thead>
           <tbody className="divide-y">
-            {entries.slice(0, 50).map((entry) => {
+            {sortedEntries.slice(0, 50).map((entry) => {
               const st = STATUS_LABELS[entry.status] ?? { label: entry.status, color: "bg-gray-100 text-gray-600" };
               return (
                 <tr key={entry.id} className="hover:bg-gray-50 transition-colors">

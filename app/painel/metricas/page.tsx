@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
 import { Loader2, BarChart3, TrendingUp, Users, Clock } from "lucide-react";
 import Breadcrumbs from "../components/breadcrumbs";
+import { SortableHeader, useSortableTable, type ColumnDef } from "../components/sortable-header";
 
 type MetricsData = {
   velocity?: { sprintName: string; pointsCompleted: number; tasksCompleted: number }[];
@@ -29,6 +30,15 @@ export default function MetricasPage() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [metricType]);
+
+  type ProdEntry = NonNullable<MetricsData["productivity"]>[number];
+  const prodColumns: ColumnDef<ProdEntry>[] = [
+    { key: "displayName", label: "Membro", sortable: true, getValue: (u) => u.displayName },
+    { key: "tasksCompleted", label: "Tarefas", sortable: true, className: "text-right", getValue: (u) => u.tasksCompleted },
+    { key: "hoursLogged", label: "Horas", sortable: true, className: "text-right", getValue: (u) => u.hoursLogged },
+  ];
+  const prodTable = useSortableTable<ProdEntry>(data?.productivity ?? []);
+  const sortedProd = prodTable.sortAndFilter(data?.productivity ?? [], prodColumns);
 
   const tabs = [
     { key: "velocity" as const, label: "Velocidade", icon: TrendingUp },
@@ -96,9 +106,14 @@ export default function MetricasPage() {
               <h2 className="text-lg font-semibold mb-4">Produtividade da Equipe</h2>
               {data.productivity && data.productivity.length > 0 ? (
                 <table className="w-full text-sm">
-                  <thead><tr className="border-b text-gray-500 text-left"><th className="py-2">Membro</th><th className="py-2 text-right">Tarefas</th><th className="py-2 text-right">Horas</th></tr></thead>
+                  <thead><tr className="border-b text-left">
+                    {prodColumns.map((col) => (
+                      <SortableHeader key={col.key} label={col.label} sortDir={prodTable.getSortDir(col.key)} onSort={() => prodTable.toggleSort(col.key)}
+                        sortable={col.sortable} className={col.className ?? ""} />
+                    ))}
+                  </tr></thead>
                   <tbody>
-                    {data.productivity.map((u) => (
+                    {sortedProd.map((u) => (
                       <tr key={u.userId} className="border-b last:border-0"><td className="py-2 font-medium text-gray-900">{u.displayName}</td><td className="py-2 text-right">{u.tasksCompleted}</td><td className="py-2 text-right">{u.hoursLogged}h</td></tr>
                     ))}
                   </tbody>

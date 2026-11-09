@@ -6,6 +6,7 @@ import { Loader2, Plus, Pencil, Trash2, TextCursorInput } from "lucide-react";
 import Breadcrumbs from "../components/breadcrumbs";
 import FormDialog, { FormField, FormActions, inputClass, selectClass } from "../components/form-dialog";
 import { useToast } from "../components/toast";
+import { SortableHeader, useSortableTable, type ColumnDef } from "../components/sortable-header";
 
 type FieldDef = { id: number; entityType: string; fieldKey: string; label: string; fieldType: string; optionsJson: any; required: boolean; sequence: number; active: boolean };
 
@@ -91,9 +92,19 @@ export default function CamposPersonalizadosPage() {
     } catch (err: any) { setError(err.message); }
   }
 
+  const cfColumns: ColumnDef<FieldDef>[] = [
+    { key: "fieldKey", label: "Chave", sortable: true, getValue: (f) => f.fieldKey },
+    { key: "label", label: "Label", sortable: true, getValue: (f) => f.label },
+    { key: "fieldType", label: "Tipo", sortable: true, filterable: true, filterOptions: FIELD_TYPES.map(t => t.value), className: "text-center", getValue: (f) => f.fieldType },
+    { key: "required", label: "Obrigatório", sortable: true, className: "text-center", getValue: (f) => f.required ? "Sim" : "Não" },
+    { key: "active", label: "Status", sortable: true, filterable: true, filterOptions: ["Ativo", "Inativo"], className: "text-center", getValue: (f) => f.active ? "Ativo" : "Inativo" },
+  ];
+  const { toggleSort, setFilter: setColFilter, getSortDir, filters: colFilters, sortAndFilter } = useSortableTable<FieldDef>(items);
+  const sorted = sortAndFilter(items, cfColumns);
+
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando...</div>;
 
-  const grouped = items.reduce<Record<string, FieldDef[]>>((acc, f) => { (acc[f.entityType] ??= []).push(f); return acc; }, {});
+  const grouped = sorted.reduce<Record<string, FieldDef[]>>((acc, f) => { (acc[f.entityType] ??= []).push(f); return acc; }, {});
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -117,11 +128,11 @@ export default function CamposPersonalizadosPage() {
           <div className="px-4 py-3 bg-gray-50 border-b font-medium text-gray-700 text-sm capitalize">{ENTITY_TYPES.find(e => e.value === etype)?.label ?? etype}</div>
           <table className="w-full text-sm">
             <thead className="border-b"><tr>
-              <th className="text-left px-4 py-2 font-medium text-gray-400 text-xs">Chave</th>
-              <th className="text-left px-4 py-2 font-medium text-gray-400 text-xs">Label</th>
-              <th className="text-center px-4 py-2 font-medium text-gray-400 text-xs">Tipo</th>
-              <th className="text-center px-4 py-2 font-medium text-gray-400 text-xs">Obrigatório</th>
-              <th className="text-center px-4 py-2 font-medium text-gray-400 text-xs">Status</th>
+              {cfColumns.map((col) => (
+                <SortableHeader key={col.key} label={col.label} sortDir={getSortDir(col.key)} onSort={() => toggleSort(col.key)}
+                  sortable={col.sortable} filterable={col.filterable} filterOptions={col.filterOptions}
+                  filterValue={colFilters[col.key] ?? ""} onFilter={(v) => setColFilter(col.key, v)} className={col.className ?? ""} />
+              ))}
               <th className="w-16"></th>
             </tr></thead>
             <tbody className="divide-y">

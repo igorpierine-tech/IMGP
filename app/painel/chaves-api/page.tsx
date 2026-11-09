@@ -6,6 +6,7 @@ import { Loader2, Plus, Trash2, Key, Copy, Eye, EyeOff } from "lucide-react";
 import Breadcrumbs from "../components/breadcrumbs";
 import FormDialog, { FormField, FormActions, inputClass } from "../components/form-dialog";
 import { useToast } from "../components/toast";
+import { SortableHeader, useSortableTable, type ColumnDef } from "../components/sortable-header";
 
 type ApiKeyItem = { id: number; name: string; keyPrefix: string; scopes: string[]; expiresAt: string | null; lastUsedAt: string | null; revoked: boolean; createdAt: string };
 
@@ -72,6 +73,17 @@ export default function ChavesApiPage() {
     return new Date(d).toLocaleDateString("pt-BR");
   }
 
+  const akColumns: ColumnDef<ApiKeyItem>[] = [
+    { key: "name", label: "Nome", sortable: true, getValue: (k) => k.name },
+    { key: "keyPrefix", label: "Prefixo", sortable: true, getValue: (k) => k.keyPrefix },
+    { key: "scopes", label: "Escopos", sortable: false, className: "hidden sm:table-cell" },
+    { key: "expiresAt", label: "Expira", sortable: true, className: "text-center hidden md:table-cell", getValue: (k) => k.expiresAt ?? "" },
+    { key: "lastUsedAt", label: "Último uso", sortable: true, className: "text-center hidden md:table-cell", getValue: (k) => k.lastUsedAt ? new Date(k.lastUsedAt).getTime() : 0 },
+    { key: "revoked", label: "Status", sortable: true, filterable: true, filterOptions: ["Ativa", "Revogada"], className: "text-center", getValue: (k) => k.revoked ? "Revogada" : "Ativa" },
+  ];
+  const { toggleSort, setFilter: setColFilter, getSortDir, filters: colFilters, sortAndFilter } = useSortableTable<ApiKeyItem>(items);
+  const sorted = sortAndFilter(items, akColumns);
+
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando...</div>;
 
   return (
@@ -92,16 +104,15 @@ export default function ChavesApiPage() {
       <div className="bg-white rounded-xl border border-gray-200/60 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b"><tr>
-            <th className="text-left px-4 py-3 font-medium text-gray-500">Nome</th>
-            <th className="text-left px-4 py-3 font-medium text-gray-500">Prefixo</th>
-            <th className="text-left px-4 py-3 font-medium text-gray-500 hidden sm:table-cell">Escopos</th>
-            <th className="text-center px-4 py-3 font-medium text-gray-500 hidden md:table-cell">Expira</th>
-            <th className="text-center px-4 py-3 font-medium text-gray-500 hidden md:table-cell">Último uso</th>
-            <th className="text-center px-4 py-3 font-medium text-gray-500 w-20">Status</th>
+            {akColumns.map((col) => (
+              <SortableHeader key={col.key} label={col.label} sortDir={getSortDir(col.key)} onSort={() => toggleSort(col.key)}
+                sortable={col.sortable} filterable={col.filterable} filterOptions={col.filterOptions}
+                filterValue={colFilters[col.key] ?? ""} onFilter={(v) => setColFilter(col.key, v)} className={col.className ?? ""} />
+            ))}
             <th className="w-12"></th>
           </tr></thead>
           <tbody className="divide-y">
-            {items.map((item) => (
+            {sorted.map((item) => (
               <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${item.revoked ? "opacity-50" : ""}`}>
                 <td className="px-4 py-3 font-medium text-gray-900">{item.name}</td>
                 <td className="px-4 py-3 font-mono text-xs text-gray-500">{item.keyPrefix}...</td>

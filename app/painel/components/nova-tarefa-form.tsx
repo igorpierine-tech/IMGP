@@ -5,6 +5,8 @@ import { appPath } from "@/lib/app-path";
 import FormDialog, { FormField, FormActions, inputClass, selectClass } from "./form-dialog";
 
 type ProjectOption = { id: number; name: string };
+type EpicOption = { id: number; name: string };
+type SprintOption = { id: number; name: string };
 
 export default function NovaTarefaForm({
   open, onClose, onCreated, defaultProjectId,
@@ -15,10 +17,14 @@ export default function NovaTarefaForm({
   defaultProjectId?: number | null;
 }) {
   const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [epics, setEpics] = useState<EpicOption[]>([]);
+  const [sprints, setSprints] = useState<SprintOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const [projectId, setProjectId] = useState("");
+  const [parentId, setParentId] = useState("");
+  const [sprintId, setSprintId] = useState("");
   const [name, setName] = useState("");
   const [kind, setKind] = useState<"task" | "milestone" | "subtask">("task");
   const [status, setStatus] = useState("A fazer");
@@ -40,8 +46,19 @@ export default function NovaTarefaForm({
       .catch(() => {});
   }, [open]);
 
+  useEffect(() => {
+    if (!projectId) { setEpics([]); setSprints([]); return; }
+    fetch(appPath(`/api/epics?projectId=${projectId}`), { credentials: "include" })
+      .then(async (r) => { const b = await r.json() as any; setEpics(b.epics ?? []); })
+      .catch(() => setEpics([]));
+    fetch(appPath(`/api/sprints?projectId=${projectId}`), { credentials: "include" })
+      .then(async (r) => { const b = await r.json() as any; setSprints(b.sprints ?? []); })
+      .catch(() => setSprints([]));
+  }, [projectId]);
+
   function reset() {
     setProjectId(defaultProjectId ? String(defaultProjectId) : "");
+    setParentId(""); setSprintId("");
     setName(""); setKind("task"); setStatus("A fazer"); setAssignedName("");
     setPlannedStart(""); setPlannedEnd(""); setPlannedHours(""); setPriority("Média"); setError("");
   }
@@ -59,6 +76,8 @@ export default function NovaTarefaForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId: Number(projectId), name, kind, status,
+          parentId: parentId ? Number(parentId) : undefined,
+          sprintId: sprintId ? Number(sprintId) : undefined,
           assignedName: assignedName || undefined,
           plannedStart: plannedStart || undefined,
           plannedEnd: plannedEnd || undefined,
@@ -93,6 +112,21 @@ export default function NovaTarefaForm({
         <FormField label="Título" required>
           <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} required />
         </FormField>
+
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="Épico">
+            <select value={parentId} onChange={(e) => setParentId(e.target.value)} className={selectClass}>
+              <option value="">Nenhum (avulsa)</option>
+              {epics.map((ep) => <option key={ep.id} value={ep.id}>{ep.name}</option>)}
+            </select>
+          </FormField>
+          <FormField label="Sprint">
+            <select value={sprintId} onChange={(e) => setSprintId(e.target.value)} className={selectClass}>
+              <option value="">Nenhuma</option>
+              {sprints.map((sp) => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
+            </select>
+          </FormField>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Tipo">

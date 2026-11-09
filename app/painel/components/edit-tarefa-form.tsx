@@ -1,23 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { appPath } from "@/lib/app-path";
 import FormDialog, { FormField, FormActions, inputClass, selectClass } from "./form-dialog";
 
 type Task = {
   id: number; name: string; kind: string; status: string; health: string;
   assignedName?: string; plannedStart?: string; plannedEnd?: string; plannedHours: number;
-  rawJson?: string;
+  rawJson?: string; parentId?: number | null; sprintId?: number | null; projectId?: number;
 };
+type EpicOption = { id: number; name: string };
+type SprintOption = { id: number; name: string };
 
 export default function EditTarefaForm({ task, onClose, onSaved }: { task: Task; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState(task.name);
   const [status, setStatus] = useState(task.status);
+  const [parentId, setParentId] = useState(task.parentId ? String(task.parentId) : "");
+  const [sprintId, setSprintId] = useState(task.sprintId ? String(task.sprintId) : "");
+  const [epics, setEpics] = useState<EpicOption[]>([]);
+  const [sprints, setSprints] = useState<SprintOption[]>([]);
   const [assignedName, setAssignedName] = useState(task.assignedName ?? "");
   const [plannedEnd, setPlannedEnd] = useState(task.plannedEnd ?? "");
   const [plannedHours, setPlannedHours] = useState(task.plannedHours);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!task.projectId) return;
+    fetch(appPath(`/api/epics?projectId=${task.projectId}`), { credentials: "include" })
+      .then(async (r) => { const b = await r.json() as any; setEpics(b.epics ?? []); })
+      .catch(() => {});
+    fetch(appPath(`/api/sprints?projectId=${task.projectId}`), { credentials: "include" })
+      .then(async (r) => { const b = await r.json() as any; setSprints(b.sprints ?? []); })
+      .catch(() => {});
+  }, [task.projectId]);
 
   let priority = "Média";
   try { if (task.rawJson) priority = JSON.parse(task.rawJson).priority ?? "Média"; } catch {}
@@ -31,7 +47,7 @@ export default function EditTarefaForm({ task, onClose, onSaved }: { task: Task;
       const r = await fetch(appPath("/api/project-items"), {
         method: "PATCH", credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: task.id, name: name.trim(), status, assignedName: assignedName.trim() || null, plannedEnd: plannedEnd || null, plannedHours, priority: pri }),
+        body: JSON.stringify({ id: task.id, name: name.trim(), status, parentId: parentId ? Number(parentId) : null, sprintId: sprintId ? Number(sprintId) : null, assignedName: assignedName.trim() || null, plannedEnd: plannedEnd || null, plannedHours, priority: pri }),
       });
       if (!r.ok) { const b = await r.json() as { error?: string }; throw new Error(b.error ?? "Erro"); }
       onSaved();
@@ -44,6 +60,20 @@ export default function EditTarefaForm({ task, onClose, onSaved }: { task: Task;
       <form onSubmit={save} className="space-y-4">
         {error && <div className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</div>}
         <FormField label="Nome *"><input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} /></FormField>
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="Épico">
+            <select value={parentId} onChange={(e) => setParentId(e.target.value)} className={selectClass}>
+              <option value="">Nenhum (avulsa)</option>
+              {epics.map((ep) => <option key={ep.id} value={ep.id}>{ep.name}</option>)}
+            </select>
+          </FormField>
+          <FormField label="Sprint">
+            <select value={sprintId} onChange={(e) => setSprintId(e.target.value)} className={selectClass}>
+              <option value="">Nenhuma</option>
+              {sprints.map((sp) => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
+            </select>
+          </FormField>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Status">
             <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>

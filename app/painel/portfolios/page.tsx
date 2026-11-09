@@ -6,6 +6,7 @@ import { Loader2, FolderKanban, ChevronRight, Plus, Pencil, Trash2 } from "lucid
 import Breadcrumbs from "../components/breadcrumbs";
 import NovoPortfolioForm from "../components/novo-portfolio-form";
 import { useToast } from "../components/toast";
+import { SortableHeader, useSortableTable, type ColumnDef } from "../components/sortable-header";
 
 type Portfolio = { id: number; name: string; description?: string };
 type PortfolioDetail = {
@@ -66,6 +67,17 @@ export default function PortfoliosPage() {
 
   if (detail) {
     const { portfolio, projects, summary } = detail;
+    type PortProject = typeof projects[number];
+    const pfColumns: ColumnDef<PortProject>[] = [
+      { key: "projectName", label: "Projeto", sortable: true, getValue: (p) => p.projectName },
+      { key: "projectStatus", label: "Status", sortable: true, filterable: true, filterOptions: [...new Set(projects.map(p => p.projectStatus))].sort(), getValue: (p) => p.projectStatus },
+      { key: "projectHealth", label: "Saúde", sortable: true, getValue: (p) => p.projectHealth },
+      { key: "projectProgress", label: "Progresso", sortable: true, getValue: (p) => p.projectProgress },
+      { key: "plannedCost", label: "Custo plan.", sortable: true, getValue: (p) => p.plannedCost },
+      { key: "actualCost", label: "Custo real", sortable: true, getValue: (p) => p.actualCost },
+    ];
+    const pf = useSortableTable<PortProject>(projects);
+    const sortedProjects = pf.sortAndFilter(projects, pfColumns);
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-2">
@@ -83,9 +95,15 @@ export default function PortfoliosPage() {
 
         <div className="bg-white rounded-xl border">
           <table className="w-full text-sm">
-            <thead><tr className="border-b text-gray-500 text-left"><th className="p-3">Projeto</th><th className="p-3">Status</th><th className="p-3">Saúde</th><th className="p-3">Progresso</th><th className="p-3">Custo plan.</th><th className="p-3">Custo real</th></tr></thead>
+            <thead><tr className="border-b text-left">
+              {pfColumns.map((col) => (
+                <SortableHeader key={col.key} label={col.label} sortDir={pf.getSortDir(col.key)} onSort={() => pf.toggleSort(col.key)}
+                  sortable={col.sortable} filterable={col.filterable} filterOptions={col.filterOptions}
+                  filterValue={pf.filters[col.key] ?? ""} onFilter={(v) => pf.setFilter(col.key, v)} />
+              ))}
+            </tr></thead>
             <tbody>
-              {projects.map((p) => (
+              {sortedProjects.map((p) => (
                 <tr key={p.projectId} className="border-b last:border-0 hover:bg-gray-50">
                   <td className="p-3 font-medium text-gray-900">{p.projectName}</td>
                   <td className="p-3 text-gray-600">{p.projectStatus}</td>

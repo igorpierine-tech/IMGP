@@ -6,8 +6,9 @@ import Link from "next/link";
 import { appPath } from "@/lib/app-path";
 import {
   Loader2, ChevronRight, FolderOpen, CheckCircle2, Clock, AlertTriangle,
-  Calendar, Users, Edit2, MessageSquare, Plus,
+  Calendar, Users, Edit2, Trash2, MessageSquare, Plus, ChevronDown, Layers,
 } from "lucide-react";
+import { SortableHeader, useSortableTable, type SortDir, type ColumnDef } from "../components/sortable-header";
 import NovaTarefaForm from "../components/nova-tarefa-form";
 import NovoSprintForm from "../components/novo-sprint-form";
 import CommentsSection from "../components/comments-section";
@@ -15,6 +16,7 @@ import EditProjectForm from "../components/edit-project-form";
 import EditTarefaForm from "../components/edit-tarefa-form";
 import Breadcrumbs from "../components/breadcrumbs";
 import Attachments from "../components/attachments";
+import { useToast } from "../components/toast";
 
 type Project = {
   id: number; name: string; code?: string; area?: string; managerName?: string;
@@ -26,7 +28,7 @@ type Project = {
 type TaskItem = {
   id: number; name: string; kind: string; status: string; health: string;
   assignedName?: string; plannedStart?: string; plannedEnd?: string; plannedHours: number;
-  rawJson?: string;
+  rawJson?: string; parentId?: number | null; sprintId?: number | null; projectId?: number;
 };
 
 type Sprint = {
@@ -61,6 +63,7 @@ function formatDate(d?: string) {
 }
 
 export default function ProjetoDetailPage() {
+  const { toast } = useToast();
   const searchParams = useSearchParams();
   const projectId = Number(searchParams.get("id"));
 
@@ -110,9 +113,60 @@ export default function ProjetoDetailPage() {
   if (error) return <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">{error}</div>;
   if (!project) return null;
 
+  async function handleDeleteTask(t: TaskItem) {
+    if (!confirm(`Excluir tarefa "${t.name}"?`)) return;
+    try {
+      const r = await fetch(appPath("/api/project-items"), {
+        method: "DELETE", credentials: "include",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: t.id }),
+      });
+      if (!r.ok) { const b = await r.json() as { error?: string }; throw new Error(b.error ?? "Erro"); }
+      toast("Tarefa excluída");
+      setRefreshKey((k) => k + 1);
+    } catch (err) { toast(err instanceof Error ? err.message : "Erro ao excluir", "error"); }
+  }
+
+  const table = useSortableTable<TaskItem>(tasks);
+
   const hs = healthStyles[project.health] ?? { bg: "bg-gray-100 text-gray-600", label: project.health };
-  const doneTasks = tasks.filter((t) => t.status === "Concluída").length;
-  const totalHours = tasks.reduce((s, t) => s + (t.plannedHours ?? 0), 0);
+  const allItems = tasks;
+  const epics = allItems.filter((t) => t.kind === "epic");
+  const nonEpics = allItems.filter((t) => t.kind !== "epic");
+  const doneTasks = nonEpics.filter((t) => t.status === "Concluída").length;
+  const totalHours = nonEpics.reduce((s, t) => s + (t.plannedHours ?? 0), 0);
+
+  const taskColumns: ColumnDef<TaskItem>[] = [
+    { key: "name", label: "Tarefa", sortable: true, getValue: (r) => r.name },
+    { key: "kind", label: "Tipo", sortable: true, filterable: true, filterOptions: ["epic", "task", "subtask", "milestone"], getValue: (r) => r.kind },
+    { key: "status", label: "Status", sortable: true, filterable: true, filterOptions: ["A fazer", "Em progresso", "Bloqueada", "Em revisão", "Concluída"], getValue: (r) => r.status },
+    { key: "assignedName", label: "Responsável", sortable: true, getValue: (r) => r.assignedName ?? "" },
+    { key: "plannedHours", label: "Horas", sortable: true, getValue: (r) => r.plannedHours },
+    { key: "plannedEnd", label: "Prazo", sortable: true, getValue: (r) => r.plannedEnd ?? "" },
+  ];
+  const sortedTasks = table.sortAndFilter(allItems, taskColumns);
+
+  const epicMap = new Map<number, TaskItem>();
+  for (const ep of epics) epicMap.set(ep.id, ep);
+
+  type GroupedSection = { epic: TaskItem | null; tasks: TaskItem[] };
+  const grouped: GroupedSection[] = [];
+  const epicTaskMap = new Map<number, TaskItem[]>();
+  const orphanTasks: TaskItem[] = [];
+
+  for (const t of sortedTasks) {
+    if (t.kind === "epic") continue;
+    if (t.parentId && epicMap.has(t.parentId)) {
+      const arr = epicTaskMap.get(t.parentId) ?? [];
+      arr.push(t);
+      epicTaskMap.set(t.parentId, arr);
+    } else {
+      orphanTasks.push(t);
+    }
+  }
+  for (const ep of sortedTasks.filter((t) => t.kind === "epic")) {
+    grouped.push({ epic: ep, tasks: epicTaskMap.get(ep.id) ?? [] });
+  }
+  if (orphanTasks.length > 0) grouped.push({ epic: null, tasks: orphanTasks });
 
   return (
     <div className="space-y-6">
@@ -203,30 +257,25 @@ export default function ProjetoDetailPage() {
               <Plus size={14} /> Nova Tarefa
             </button>
           </div>
-          {tasks.length === 0 ? (
+          {allItems.length === 0 ? (
             <div className="bg-white rounded-xl border p-8 text-center text-gray-400 text-sm">Nenhuma tarefa neste projeto.</div>
           ) : (
             <div className="bg-white rounded-xl border overflow-hidden">
               <table className="w-full text-sm">
-                <thead><tr className="border-b bg-gray-50 text-gray-500 text-left">
-                  <th className="p-3 font-medium">Tarefa</th><th className="p-3 font-medium">Tipo</th>
-                  <th className="p-3 font-medium">Status</th><th className="p-3 font-medium">Responsável</th>
-                  <th className="p-3 font-medium">Horas</th><th className="p-3 font-medium">Prazo</th>
-                  <th className="p-3 font-medium w-10"></th>
+                <thead><tr className="border-b bg-gray-50 text-left">
+                  {taskColumns.map((col) => (
+                    <SortableHeader key={col.key} label={col.label} sortDir={table.getSortDir(col.key)}
+                      onSort={() => table.toggleSort(col.key)} sortable={col.sortable} filterable={col.filterable}
+                      filterOptions={col.filterOptions} filterValue={table.filters[col.key] ?? ""}
+                      onFilter={(v) => table.setFilter(col.key, v)} />
+                  ))}
+                  <th className="p-3 font-medium w-20"></th>
                 </tr></thead>
                 <tbody>
-                  {tasks.map((t) => (
-                    <tr key={t.id} className="border-b last:border-0 hover:bg-gray-50">
-                      <td className="p-3 font-medium text-gray-900 max-w-[200px] truncate">{t.name}</td>
-                      <td className="p-3 text-gray-500 capitalize">{t.kind}</td>
-                      <td className="p-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${taskStatusStyles[t.status] ?? "bg-gray-100 text-gray-600"}`}>{t.status}</span></td>
-                      <td className="p-3 text-gray-600">{t.assignedName ?? "—"}</td>
-                      <td className="p-3 text-gray-600">{t.plannedHours ?? 0}h</td>
-                      <td className="p-3 text-gray-400 text-xs">{formatDate(t.plannedEnd)}</td>
-                      <td className="p-3">
-                        <button onClick={() => setEditingTask(t)} className="text-gray-400 hover:text-gray-600"><Edit2 size={14} /></button>
-                      </td>
-                    </tr>
+                  {grouped.map((section, si) => (
+                    <TaskSection key={section.epic?.id ?? "orphan"} section={section} si={si}
+                      taskStatusStyles={taskStatusStyles} formatDate={formatDate}
+                      onEdit={(t) => setEditingTask({ ...t, projectId })} onDelete={handleDeleteTask} />
                   ))}
                 </tbody>
               </table>
@@ -270,5 +319,63 @@ export default function ProjetoDetailPage() {
           onSaved={() => { setRefreshKey((k) => k + 1); setEditingTask(null); }} />
       )}
     </div>
+  );
+}
+
+type GroupedSection = { epic: TaskItem | null; tasks: TaskItem[] };
+
+function TaskSection({ section, si, taskStatusStyles, formatDate, onEdit, onDelete }: {
+  section: GroupedSection; si: number;
+  taskStatusStyles: Record<string, string>; formatDate: (d?: string) => string;
+  onEdit: (t: TaskItem) => void; onDelete: (t: TaskItem) => void;
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+  const epicRow = section.epic;
+  const rows = collapsed ? [] : section.tasks;
+
+  return (
+    <>
+      {epicRow ? (
+        <tr className="bg-emerald-50/60 border-b cursor-pointer hover:bg-emerald-50" onClick={() => setCollapsed(!collapsed)}>
+          <td className="p-3 font-semibold text-[#0c4a3e] flex items-center gap-2">
+            <ChevronDown size={14} className={`transition-transform ${collapsed ? "-rotate-90" : ""}`} />
+            <Layers size={14} />
+            {epicRow.name}
+            <span className="text-xs font-normal text-gray-400 ml-1">({section.tasks.length} tarefas)</span>
+          </td>
+          <td className="p-3 text-gray-500 text-xs">Épico</td>
+          <td className="p-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${taskStatusStyles[epicRow.status] ?? "bg-gray-100 text-gray-600"}`}>{epicRow.status}</span></td>
+          <td className="p-3 text-gray-600">{epicRow.assignedName ?? "—"}</td>
+          <td className="p-3 text-gray-600">{epicRow.plannedHours ?? 0}h</td>
+          <td className="p-3 text-gray-400 text-xs">{formatDate(epicRow.plannedEnd)}</td>
+          <td className="p-3">
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+              <button onClick={() => onEdit(epicRow)} className="text-gray-400 hover:text-[#0c4a3e]"><Edit2 size={14} /></button>
+              <button onClick={() => onDelete(epicRow)} className="text-gray-400 hover:text-red-500"><Trash2 size={14} /></button>
+            </div>
+          </td>
+        </tr>
+      ) : section.tasks.length > 0 && si > 0 ? (
+        <tr className="bg-gray-50/60 border-b">
+          <td colSpan={7} className="p-2 pl-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Tarefas avulsas</td>
+        </tr>
+      ) : null}
+      {rows.map((t) => (
+        <tr key={t.id} className="border-b last:border-0 hover:bg-gray-50">
+          <td className={`p-3 font-medium text-gray-900 max-w-[200px] truncate ${epicRow ? "pl-9" : ""}`}>{t.name}</td>
+          <td className="p-3 text-gray-500 capitalize">{t.kind}</td>
+          <td className="p-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${taskStatusStyles[t.status] ?? "bg-gray-100 text-gray-600"}`}>{t.status}</span></td>
+          <td className="p-3 text-gray-600">{t.assignedName ?? "—"}</td>
+          <td className="p-3 text-gray-600">{t.plannedHours ?? 0}h</td>
+          <td className="p-3 text-gray-400 text-xs">{formatDate(t.plannedEnd)}</td>
+          <td className="p-3">
+            <div className="flex items-center gap-1">
+              <button onClick={() => onEdit(t)} className="text-gray-400 hover:text-[#0c4a3e]"><Edit2 size={14} /></button>
+              <button onClick={() => onDelete(t)} className="text-gray-400 hover:text-red-500"><Trash2 size={14} /></button>
+            </div>
+          </td>
+        </tr>
+      ))}
+    </>
   );
 }

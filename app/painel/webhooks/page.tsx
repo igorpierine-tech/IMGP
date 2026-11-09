@@ -6,6 +6,7 @@ import { Loader2, Plus, Pencil, Trash2, Webhook, ExternalLink } from "lucide-rea
 import Breadcrumbs from "../components/breadcrumbs";
 import FormDialog, { FormField, FormActions, inputClass } from "../components/form-dialog";
 import { useToast } from "../components/toast";
+import { SortableHeader, useSortableTable, type ColumnDef } from "../components/sortable-header";
 
 type WebhookItem = { id: number; name: string; url: string; secret: string; eventsJson: string; active: boolean; lastTriggeredAt: string | null; failureCount: number };
 
@@ -83,6 +84,16 @@ export default function WebhooksPage() {
     try { return JSON.parse(json); } catch { return []; }
   }
 
+  const whColumns: ColumnDef<WebhookItem>[] = [
+    { key: "name", label: "Nome", sortable: true, getValue: (w) => w.name },
+    { key: "url", label: "URL", sortable: true, className: "hidden sm:table-cell", getValue: (w) => w.url },
+    { key: "events", label: "Eventos", sortable: true, className: "text-center", getValue: (w) => parseEvents(w.eventsJson).length },
+    { key: "failures", label: "Falhas", sortable: true, className: "text-center", getValue: (w) => w.failureCount },
+    { key: "active", label: "Status", sortable: true, filterable: true, filterOptions: ["Ativo", "Inativo"], className: "text-center", getValue: (w) => w.active ? "Ativo" : "Inativo" },
+  ];
+  const { toggleSort, setFilter: setColFilter, getSortDir, filters: colFilters, sortAndFilter } = useSortableTable<WebhookItem>(items);
+  const sorted = sortAndFilter(items, whColumns);
+
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando...</div>;
 
   return (
@@ -103,15 +114,15 @@ export default function WebhooksPage() {
       <div className="bg-white rounded-xl border border-gray-200/60 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b"><tr>
-            <th className="text-left px-4 py-3 font-medium text-gray-500">Nome</th>
-            <th className="text-left px-4 py-3 font-medium text-gray-500 hidden sm:table-cell">URL</th>
-            <th className="text-center px-4 py-3 font-medium text-gray-500 w-20">Eventos</th>
-            <th className="text-center px-4 py-3 font-medium text-gray-500 w-20">Falhas</th>
-            <th className="text-center px-4 py-3 font-medium text-gray-500 w-20">Status</th>
+            {whColumns.map((col) => (
+              <SortableHeader key={col.key} label={col.label} sortDir={getSortDir(col.key)} onSort={() => toggleSort(col.key)}
+                sortable={col.sortable} filterable={col.filterable} filterOptions={col.filterOptions}
+                filterValue={colFilters[col.key] ?? ""} onFilter={(v) => setColFilter(col.key, v)} className={col.className ?? ""} />
+            ))}
             <th className="w-12"></th>
           </tr></thead>
           <tbody className="divide-y">
-            {items.map((item) => {
+            {sorted.map((item) => {
               const evts = parseEvents(item.eventsJson);
               return (
                 <tr key={item.id} className="hover:bg-gray-50 transition-colors">

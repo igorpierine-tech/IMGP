@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
 import { Loader2, Route, ArrowRight } from "lucide-react";
 import Breadcrumbs from "../components/breadcrumbs";
+import { SortableHeader, useSortableTable, type ColumnDef } from "../components/sortable-header";
 
 type CriticalTask = { id: number; name: string; earlyStart: number; earlyFinish: number; lateStart: number; lateFinish: number; slack: number; critical: boolean };
 type ProjectOption = { id: number; name: string };
@@ -36,6 +37,18 @@ export default function CaminhoCriticoPage() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [selectedProject]);
+
+  const cpColumns: ColumnDef<CriticalTask>[] = [
+    { key: "name", label: "Tarefa", sortable: true, getValue: (t) => t.name },
+    { key: "earlyStart", label: "Início (cedo)", sortable: true, className: "text-center", getValue: (t) => t.earlyStart },
+    { key: "earlyFinish", label: "Fim (cedo)", sortable: true, className: "text-center", getValue: (t) => t.earlyFinish },
+    { key: "lateStart", label: "Início (tarde)", sortable: true, className: "text-center", getValue: (t) => t.lateStart },
+    { key: "lateFinish", label: "Fim (tarde)", sortable: true, className: "text-center", getValue: (t) => t.lateFinish },
+    { key: "slack", label: "Folga", sortable: true, className: "text-center", getValue: (t) => t.slack },
+    { key: "critical", label: "Crítica", sortable: true, filterable: true, filterOptions: ["Sim", "Não"], className: "text-center w-20", getValue: (t) => t.critical ? "Sim" : "Não" },
+  ];
+  const { toggleSort, setFilter: setColFilter, getSortDir, filters: colFilters, sortAndFilter } = useSortableTable<CriticalTask>(tasks);
+  const sortedTasks = sortAndFilter(tasks, cpColumns);
 
   if (error) return <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">{error}</div>;
 
@@ -96,16 +109,14 @@ export default function CaminhoCriticoPage() {
           <div className="bg-white rounded-xl border border-gray-200/60 shadow-sm overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b"><tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">Tarefa</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-500">Início (cedo)</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-500">Fim (cedo)</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-500">Início (tarde)</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-500">Fim (tarde)</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-500">Folga</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-500 w-20">Crítica</th>
+                {cpColumns.map((col) => (
+                  <SortableHeader key={col.key} label={col.label} sortDir={getSortDir(col.key)} onSort={() => toggleSort(col.key)}
+                    sortable={col.sortable} filterable={col.filterable} filterOptions={col.filterOptions}
+                    filterValue={colFilters[col.key] ?? ""} onFilter={(v) => setColFilter(col.key, v)} className={col.className ?? ""} />
+                ))}
               </tr></thead>
               <tbody className="divide-y">
-                {tasks.map((t) => (
+                {sortedTasks.map((t) => (
                   <tr key={t.id} className={`hover:bg-gray-50 transition-colors ${t.critical ? "bg-red-50/30" : ""}`}>
                     <td className="px-4 py-3 font-medium text-gray-900">{t.name}</td>
                     <td className="px-4 py-3 text-center text-gray-500">{t.earlyStart}</td>
