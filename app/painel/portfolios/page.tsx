@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
-import { Loader2, FolderKanban, ChevronRight } from "lucide-react";
+import { Loader2, FolderKanban, ChevronRight, Plus } from "lucide-react";
+import NovoPortfolioForm from "../components/novo-portfolio-form";
 
 type Portfolio = { id: number; name: string; description?: string };
 type PortfolioDetail = {
@@ -20,8 +21,11 @@ export default function PortfoliosPage() {
   const [detail, setDetail] = useState<PortfolioDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showNovo, setShowNovo] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
+    setLoading(true);
     fetch(appPath("/api/portfolios"), { credentials: "include" })
       .then(async (r) => {
         const body = await r.json() as { portfolios?: Portfolio[]; error?: string };
@@ -30,7 +34,7 @@ export default function PortfoliosPage() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [refreshKey]);
 
   async function loadDetail(id: number) {
     const r = await fetch(appPath(`/api/portfolios?id=${id}`), { credentials: "include" });
@@ -88,13 +92,21 @@ export default function PortfoliosPage() {
 
   return (
     <div className="space-y-6">
-      <div><h1 className="text-2xl font-bold text-gray-900">Portfólios</h1><p className="text-sm text-gray-500 mt-1">Agrupamentos estratégicos de projetos</p></div>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div><h1 className="text-2xl font-bold text-gray-900">Portfólios</h1><p className="text-sm text-gray-500 mt-1">Agrupamentos estratégicos de projetos</p></div>
+        <button onClick={() => setShowNovo(true)}
+          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-[#0c4a3e] hover:bg-[#0a3d33] rounded-lg transition-colors">
+          <Plus size={16} /> Novo Portfólio
+        </button>
+      </div>
+      <NovoPortfolioForm open={showNovo} onClose={() => setShowNovo(false)} onCreated={() => setRefreshKey((k) => k + 1)} />
 
       {portfolios.length === 0 ? (
         <div className="bg-white rounded-xl border p-12 text-center">
           <FolderKanban size={40} className="text-gray-300 mx-auto mb-3" />
           <h3 className="text-lg font-medium text-gray-600">Nenhum portfólio criado</h3>
-          <p className="text-sm text-gray-400 mt-1">Crie portfólios via API para organizar seus projetos.</p>
+          <p className="text-sm text-gray-400 mt-1">Crie portfólios para organizar seus projetos.</p>
+          <button onClick={() => setShowNovo(true)} className="mt-3 px-4 py-2 text-sm font-medium text-white bg-[#0c4a3e] rounded-lg hover:bg-[#0a3d33]">Criar primeiro portfólio</button>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

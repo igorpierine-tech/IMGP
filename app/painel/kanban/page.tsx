@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
-import { Loader2, GripVertical } from "lucide-react";
+import { Loader2, GripVertical, Plus } from "lucide-react";
+import NovaTarefaForm from "../components/nova-tarefa-form";
+import NovoSprintForm from "../components/novo-sprint-form";
 
 type KanbanItem = { id: number; name: string; status: string; health: string; assignedName?: string };
 type ProjectOption = { id: number; name: string };
@@ -35,6 +37,9 @@ export default function KanbanPage() {
   const [columns, setColumns] = useState<Record<string, KanbanItem[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showNovaTarefa, setShowNovaTarefa] = useState(false);
+  const [showNovoSprint, setShowNovoSprint] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     fetch(appPath("/api/projects"), { credentials: "include" })
@@ -60,7 +65,7 @@ export default function KanbanPage() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [selectedProject]);
+  }, [selectedProject, refreshKey]);
 
   if (error) return <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">{error}</div>;
 
@@ -71,16 +76,28 @@ export default function KanbanPage() {
           <h1 className="text-2xl font-bold text-gray-900">Kanban</h1>
           <p className="text-sm text-gray-500 mt-1">Visão de tarefas por status</p>
         </div>
-        {projects.length > 0 && (
-          <select
-            value={selectedProject ?? ""}
-            onChange={(e) => setSelectedProject(Number(e.target.value))}
-            className="text-sm border rounded-lg px-3 py-1.5 text-gray-600 bg-white"
-          >
-            {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        )}
+        <div className="flex items-center gap-2">
+          {projects.length > 0 && (
+            <select
+              value={selectedProject ?? ""}
+              onChange={(e) => setSelectedProject(Number(e.target.value))}
+              className="text-sm border rounded-lg px-3 py-1.5 text-gray-600 bg-white"
+            >
+              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          )}
+          <button onClick={() => setShowNovaTarefa(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-[#0c4a3e] hover:bg-[#0a3d33] rounded-lg transition-colors">
+            <Plus size={16} /> Nova Tarefa
+          </button>
+          <button onClick={() => setShowNovoSprint(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-[#0c4a3e] bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors">
+            <Plus size={16} /> Sprint
+          </button>
+        </div>
       </div>
+      <NovaTarefaForm open={showNovaTarefa} onClose={() => setShowNovaTarefa(false)} defaultProjectId={selectedProject} onCreated={() => setRefreshKey((k) => k + 1)} />
+      <NovoSprintForm open={showNovoSprint} onClose={() => setShowNovoSprint(false)} onCreated={() => setRefreshKey((k) => k + 1)} />
 
       {loading ? (
         <div className="flex items-center justify-center h-64 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando kanban...</div>

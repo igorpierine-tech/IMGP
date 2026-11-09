@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
-import { BarChart3, FolderOpen, CheckCircle2, Clock, AlertTriangle, TrendingUp, Loader2 } from "lucide-react";
+import { BarChart3, FolderOpen, CheckCircle2, Clock, AlertTriangle, TrendingUp, Loader2, Plus } from "lucide-react";
+import NovoProjetoForm from "./components/novo-projeto-form";
+import NovaDemandaForm from "./components/nova-demanda-form";
 
 type DashboardData = {
   projects: { total: number; planning: number; inProgress: number; completed: number; onTrack: number; attention: number; late: number };
@@ -49,6 +51,8 @@ function ProgressBar({ value }: { value: number }) {
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState("");
+  const [showNovoProjeto, setShowNovoProjeto] = useState(false);
+  const [showNovaDemanda, setShowNovaDemanda] = useState(false);
 
   useEffect(() => {
     fetch(appPath("/api/dashboard"), { credentials: "include" })
@@ -73,10 +77,24 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-1">Visão geral de todos os projetos e indicadores</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-sm text-gray-500 mt-1">Visão geral de todos os projetos e indicadores</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setShowNovoProjeto(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-[#0c4a3e] hover:bg-[#0a3d33] rounded-lg transition-colors">
+            <Plus size={16} /> Novo Projeto
+          </button>
+          <button onClick={() => setShowNovaDemanda(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-[#0c4a3e] bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors">
+            <Plus size={16} /> Nova Demanda
+          </button>
+        </div>
       </div>
+      <NovoProjetoForm open={showNovoProjeto} onClose={() => setShowNovoProjeto(false)} onCreated={() => window.location.reload()} />
+      <NovaDemandaForm open={showNovaDemanda} onClose={() => setShowNovaDemanda(false)} onCreated={() => window.location.reload()} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={FolderOpen} label="Projetos ativos" value={d.projects.inProgress} sub={`${d.projects.total} no total`} color="bg-blue-50 text-blue-600" />

@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { href: "/painel/okrs", label: "OKRs / Metas", icon: Target },
   { href: "/painel/portfolios", label: "Portfólios", icon: FolderKanban },
   { href: "/painel/metricas", label: "Métricas", icon: BarChart3 },
+  { href: "/painel/demandas", label: "Demandas", icon: FileText },
   { href: "/painel/aprovacoes", label: "Aprovações", icon: ShieldCheck },
   { href: "/painel/atividade", label: "Atividade", icon: Activity },
   { href: "/painel/preferencias", label: "Preferências", icon: Settings },

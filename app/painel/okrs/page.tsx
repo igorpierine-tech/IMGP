@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
 import { Loader2, Target, Plus, ChevronDown, ChevronRight } from "lucide-react";
+import NovoObjetivoForm, { NovoKeyResultForm } from "../components/novo-objetivo-form";
 
 type KeyResult = { id: number; title: string; metricType: string; targetValue: number; currentValue: number; unit?: string };
 type Objective = { id: number; title: string; description?: string; status: string; progress: number; period?: string; createdAt: string };
@@ -12,8 +13,12 @@ export default function OkrsPage() {
   const [expanded, setExpanded] = useState<Record<number, { krs: KeyResult[]; loaded: boolean }>>({});
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showNovoObj, setShowNovoObj] = useState(false);
+  const [krTarget, setKrTarget] = useState<number | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
+    setLoading(true);
     fetch(appPath("/api/okrs"), { credentials: "include" })
       .then(async (r) => {
         const body = await r.json() as { objectives?: Objective[]; error?: string };
@@ -22,7 +27,7 @@ export default function OkrsPage() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [refreshKey]);
 
   async function toggleExpand(id: number) {
     if (expanded[id]) {
@@ -48,18 +53,27 @@ export default function OkrsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">OKRs / Metas</h1>
           <p className="text-sm text-gray-500 mt-1">Objetivos e resultados-chave da organização</p>
         </div>
+        <button onClick={() => setShowNovoObj(true)}
+          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-[#0c4a3e] hover:bg-[#0a3d33] rounded-lg transition-colors">
+          <Plus size={16} /> Novo Objetivo
+        </button>
       </div>
+      <NovoObjetivoForm open={showNovoObj} onClose={() => setShowNovoObj(false)} onCreated={() => setRefreshKey((k) => k + 1)} />
+      {krTarget !== null && (
+        <NovoKeyResultForm open objectiveId={krTarget} onClose={() => setKrTarget(null)} onCreated={() => { setRefreshKey((k) => k + 1); setExpanded({}); }} />
+      )}
 
       {objectives.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
           <Target size={40} className="text-gray-300 mx-auto mb-3" />
           <h3 className="text-lg font-medium text-gray-600">Nenhum objetivo definido</h3>
-          <p className="text-sm text-gray-400 mt-1">Crie objetivos via API para começar a acompanhar.</p>
+          <p className="text-sm text-gray-400 mt-1">Crie objetivos para começar a acompanhar.</p>
+          <button onClick={() => setShowNovoObj(true)} className="mt-3 px-4 py-2 text-sm font-medium text-white bg-[#0c4a3e] rounded-lg hover:bg-[#0a3d33]">Criar primeiro objetivo</button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -87,7 +101,9 @@ export default function OkrsPage() {
                   {!expanded[obj.id].loaded ? (
                     <div className="text-sm text-gray-400 py-2"><Loader2 className="animate-spin inline mr-1" size={14} /> Carregando...</div>
                   ) : expanded[obj.id].krs.length === 0 ? (
-                    <div className="text-sm text-gray-400 py-2">Nenhum Key Result definido.</div>
+                    <div className="text-sm text-gray-400 py-2">Nenhum Key Result definido.
+                      <button onClick={() => setKrTarget(obj.id)} className="ml-2 text-[#0c4a3e] hover:underline">Adicionar</button>
+                    </div>
                   ) : (
                     <div className="space-y-2 mt-1">
                       {expanded[obj.id].krs.map((kr) => {
@@ -107,6 +123,10 @@ export default function OkrsPage() {
                       })}
                     </div>
                   )}
+                  <button onClick={() => setKrTarget(obj.id)}
+                    className="mt-2 flex items-center gap-1 text-xs text-[#0c4a3e] hover:underline">
+                    <Plus size={12} /> Adicionar Key Result
+                  </button>
                 </div>
               )}
             </div>
