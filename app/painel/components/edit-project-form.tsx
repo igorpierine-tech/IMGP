@@ -41,7 +41,7 @@ export default function EditProjectForm({ project, onClose, onSaved }: { project
       const r = await fetch(appPath("/api/projects"), {
         method: "PATCH", credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: project.id, projectTypeId }),
+        body: JSON.stringify({ id: project.id, projectTypeId, status }),
       });
       if (!r.ok) { const b = await r.json() as { error?: string }; throw new Error(b.error ?? "Erro"); }
       onSaved();
@@ -62,7 +62,7 @@ export default function EditProjectForm({ project, onClose, onSaved }: { project
         </FormField>
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Status">
-            <select value={status} disabled className={`${selectClass} bg-gray-50`}>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
               <option value="planning">Planejamento</option><option value="active">Ativo</option>
               <option value="on_hold">Pausado</option><option value="completed">Concluído</option>
               <option value="cancelled">Cancelado</option>

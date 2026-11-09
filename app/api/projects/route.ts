@@ -66,7 +66,9 @@ export async function PATCH(request: Request) {
     if (!projectType?.active) throw new HttpError(400, "O tipo de projeto selecionado não está disponível.");
     const [before] = await ctx.db.select().from(projects).where(eq(projects.id, id)).limit(1);
     if (!before) throw new HttpError(404, "Projeto não encontrado.");
-    const [updated] = await ctx.db.update(projects).set({ projectTypeId, updatedAt: new Date() }).where(eq(projects.id, id)).returning();
+    const validStatuses = ["planning", "active", "on_hold", "completed", "cancelled"];
+    const newStatus = typeof body.status === "string" && validStatuses.includes(body.status) ? body.status : before.status;
+    const [updated] = await ctx.db.update(projects).set({ projectTypeId, status: newStatus, updatedAt: new Date() }).where(eq(projects.id, id)).returning();
     await writeAudit({ actor: ctx.user, action: "project.type_updated", entityType: "project", entityId: id, requestId: request.headers.get("cf-ray"), before, after: updated });
     return Response.json({ project: updated });
   } catch (error) {

@@ -165,7 +165,7 @@ export default function GanttPage() {
   const [topH, botH] = useMemo(() => buildHeaders(scale, tStart, tDays, ppd), [scale, tStart, tDays, ppd]);
   const tlW = tDays * ppd;
   const todayPx = daysBetween(tStart, new Date()) * ppd;
-  const displayItems = useMemo(() => items.filter(i => parseDate(i.plannedStart) || parseDate(i.actualStart)), [items]);
+  const displayItems = useMemo(() => items.filter(i => parseDate(i.plannedStart) || parseDate(i.actualStart) || parseDate(i.plannedEnd) || parseDate(i.actualEnd)), [items]);
   const displaySprints = useMemo(() => sprints.filter(s => parseDate(s.startDate) && parseDate(s.endDate)), [sprints]);
 
   useEffect(() => {
@@ -299,7 +299,7 @@ export default function GanttPage() {
 
                 {/* Task bars */}
                 {displayItems.map(it => {
-                  const sDate = (parseDate(it.plannedStart) ?? parseDate(it.actualStart))!;
+                  const sDate = (parseDate(it.plannedStart) ?? parseDate(it.actualStart) ?? parseDate(it.plannedEnd) ?? parseDate(it.actualEnd))!;
                   const eDate = parseDate(it.plannedEnd) ?? parseDate(it.actualEnd);
                   const left = daysBetween(tStart, sDate) * ppd;
                   const width = eDate ? Math.max(4, daysBetween(sDate, eDate) * ppd) : ppd * 2;

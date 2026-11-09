@@ -11,7 +11,7 @@ export async function getDashboardKpis(ctx: ApiContext) {
     .select({
       total: count(),
       planning: count(sql`CASE WHEN ${projects.status} = 'planning' THEN 1 END`),
-      inProgress: count(sql`CASE WHEN ${projects.status} = 'in_progress' THEN 1 END`),
+      inProgress: count(sql`CASE WHEN ${projects.status} = 'active' THEN 1 END`),
       completed: count(sql`CASE WHEN ${projects.status} = 'completed' THEN 1 END`),
       onTrack: count(sql`CASE WHEN ${projects.health} = 'on_track' THEN 1 END`),
       attention: count(sql`CASE WHEN ${projects.health} = 'attention' THEN 1 END`),
