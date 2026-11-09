@@ -8,6 +8,8 @@ import {
   LayoutDashboard, KanbanSquare, Target, FolderKanban, CalendarDays,
   BarChart3, ShieldCheck, Settings, Menu, X, ChevronLeft,
   FileText, Activity, Star, Users, ArrowLeft, Download,
+  Layers, GitBranch, Tag, FileStack, TextCursorInput,
+  GitMerge, Zap, Webhook, Key,
 } from "lucide-react";
 import GlobalSearch from "./components/global-search";
 import NotificationDropdown from "./components/notification-dropdown";
@@ -35,6 +37,21 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/painel/portfolios", label: "Portfólios", icon: FolderKanban },
       { href: "/painel/metricas", label: "Métricas", icon: BarChart3 },
       { href: "/painel/atividade", label: "Atividade", icon: Activity },
+    ],
+  },
+  {
+    label: "Cadastros",
+    items: [
+      { href: "/painel/tipos-projeto", label: "Tipos de Projeto", icon: Layers },
+      { href: "/painel/fases", label: "Fases", icon: GitBranch },
+      { href: "/painel/tags", label: "Tags", icon: Tag },
+      { href: "/painel/templates", label: "Templates", icon: FileStack },
+      { href: "/painel/campos-personalizados", label: "Campos Custom", icon: TextCursorInput },
+      { href: "/painel/papeis", label: "Papéis", icon: ShieldCheck },
+      { href: "/painel/cadeias-aprovacao", label: "Aprovações", icon: GitMerge },
+      { href: "/painel/automacoes", label: "Automações", icon: Zap },
+      { href: "/painel/webhooks", label: "Webhooks", icon: Webhook },
+      { href: "/painel/chaves-api", label: "Chaves de API", icon: Key },
     ],
   },
   {
