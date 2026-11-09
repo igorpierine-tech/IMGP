@@ -16,6 +16,7 @@ import EditProjectForm from "../components/edit-project-form";
 import EditTarefaForm from "../components/edit-tarefa-form";
 import Breadcrumbs from "../components/breadcrumbs";
 import Attachments from "../components/attachments";
+import BulkActionBar from "../components/bulk-action-bar";
 import { useToast } from "../components/toast";
 
 type Project = {
@@ -86,7 +87,15 @@ export default function ProjetoDetailPage() {
   const [showEditProject, setShowEditProject] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const table = useSortableTable<TaskItem>(tasks);
+
+  function toggleSelect(id: number) {
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  }
+  function toggleAll(ids: number[]) {
+    setSelectedIds((prev) => ids.every((id) => prev.includes(id)) ? prev.filter((x) => !ids.includes(x)) : [...new Set([...prev, ...ids])]);
+  }
 
   useEffect(() => {
     if (!projectId) { setError("Projeto não informado."); setLoading(false); return; }
@@ -275,12 +284,20 @@ export default function ProjetoDetailPage() {
               <Plus size={14} /> Nova Tarefa
             </button>
           </div>
+          <BulkActionBar selectedIds={selectedIds} onClear={() => setSelectedIds([])}
+            onDone={() => setRefreshKey((k) => k + 1)} toast={toast} />
           {allItems.length === 0 ? (
             <div className="bg-white rounded-xl border p-8 text-center text-gray-400 text-sm">Nenhuma tarefa neste projeto.</div>
           ) : (
             <div className="bg-white rounded-xl border overflow-hidden">
               <table className="w-full text-sm">
                 <thead><tr className="border-b bg-gray-50 text-left">
+                  <th className="w-10 px-3">
+                    <input type="checkbox"
+                      checked={allItems.length > 0 && allItems.every((t) => selectedIds.includes(t.id))}
+                      onChange={() => toggleAll(allItems.map((t) => t.id))}
+                      className="rounded border-gray-300 text-[#0c4a3e] focus:ring-[#0c4a3e]/30 cursor-pointer" />
+                  </th>
                   {taskColumns.map((col) => (
                     <SortableHeader key={col.key} label={col.label} sortDir={table.getSortDir(col.key)}
                       onSort={() => table.toggleSort(col.key)} sortable={col.sortable} filterable={col.filterable}
@@ -293,7 +310,8 @@ export default function ProjetoDetailPage() {
                   {grouped.map((section, si) => (
                     <TaskSection key={section.epic?.id ?? "orphan"} section={section} si={si}
                       taskStatusStyles={taskStatusStyles} formatDate={formatDate}
-                      onEdit={(t) => setEditingTask({ ...t, projectId })} onDelete={handleDeleteTask} />
+                      onEdit={(t) => setEditingTask({ ...t, projectId })} onDelete={handleDeleteTask}
+                      selectedIds={selectedIds} onToggle={toggleSelect} />
                   ))}
                 </tbody>
               </table>
@@ -342,10 +360,11 @@ export default function ProjetoDetailPage() {
 
 type GroupedSection = { epic: TaskItem | null; tasks: TaskItem[] };
 
-function TaskSection({ section, si, taskStatusStyles, formatDate, onEdit, onDelete }: {
+function TaskSection({ section, si, taskStatusStyles, formatDate, onEdit, onDelete, selectedIds, onToggle }: {
   section: GroupedSection; si: number;
   taskStatusStyles: Record<string, string>; formatDate: (d?: string) => string;
   onEdit: (t: TaskItem) => void; onDelete: (t: TaskItem) => void;
+  selectedIds: number[]; onToggle: (id: number) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const epicRow = section.epic;
@@ -354,7 +373,11 @@ function TaskSection({ section, si, taskStatusStyles, formatDate, onEdit, onDele
   return (
     <>
       {epicRow ? (
-        <tr className="bg-emerald-50/60 border-b cursor-pointer hover:bg-emerald-50" onClick={() => setCollapsed(!collapsed)}>
+        <tr className={`bg-emerald-50/60 border-b cursor-pointer hover:bg-emerald-50 ${selectedIds.includes(epicRow.id) ? "ring-1 ring-inset ring-[#0c4a3e]/20" : ""}`} onClick={() => setCollapsed(!collapsed)}>
+          <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+            <input type="checkbox" checked={selectedIds.includes(epicRow.id)} onChange={() => onToggle(epicRow.id)}
+              className="rounded border-gray-300 text-[#0c4a3e] focus:ring-[#0c4a3e]/30 cursor-pointer" />
+          </td>
           <td className="p-3 font-semibold text-[#0c4a3e] flex items-center gap-2">
             <ChevronDown size={14} className={`transition-transform ${collapsed ? "-rotate-90" : ""}`} />
             <Layers size={14} />
@@ -375,11 +398,15 @@ function TaskSection({ section, si, taskStatusStyles, formatDate, onEdit, onDele
         </tr>
       ) : section.tasks.length > 0 && si > 0 ? (
         <tr className="bg-gray-50/60 border-b">
-          <td colSpan={7} className="p-2 pl-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Tarefas avulsas</td>
+          <td colSpan={8} className="p-2 pl-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Tarefas avulsas</td>
         </tr>
       ) : null}
       {rows.map((t) => (
-        <tr key={t.id} className="border-b last:border-0 hover:bg-gray-50">
+        <tr key={t.id} className={`border-b last:border-0 hover:bg-gray-50 ${selectedIds.includes(t.id) ? "bg-emerald-50/50" : ""}`}>
+          <td className="px-3 py-3">
+            <input type="checkbox" checked={selectedIds.includes(t.id)} onChange={() => onToggle(t.id)}
+              className="rounded border-gray-300 text-[#0c4a3e] focus:ring-[#0c4a3e]/30 cursor-pointer" />
+          </td>
           <td className={`p-3 font-medium text-gray-900 max-w-[200px] truncate ${epicRow ? "pl-9" : ""}`}>{t.name}</td>
           <td className="p-3 text-gray-500 capitalize">{t.kind}</td>
           <td className="p-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${taskStatusStyles[statusLabel(t.status)] ?? "bg-gray-100 text-gray-600"}`}>{statusLabel(t.status)}</span></td>

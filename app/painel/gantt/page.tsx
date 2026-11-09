@@ -339,11 +339,15 @@ export default function GanttPage() {
                   if (row.type === "epic") {
                     return <div key={`tb${it.id}`} className="relative border-b border-gray-100 bg-emerald-50/30" style={{ height: ROW_H }} />;
                   }
-                  const sDate = (parseDate(it.plannedStart) ?? parseDate(it.actualStart) ?? parseDate(it.plannedEnd) ?? parseDate(it.actualEnd));
-                  if (!sDate) return <div key={`tb${it.id}`} className="relative border-b border-gray-50" style={{ height: ROW_H }} />;
-                  const eDate = parseDate(it.plannedEnd) ?? parseDate(it.actualEnd);
+                  const rawStart = parseDate(it.plannedStart) ?? parseDate(it.actualStart);
+                  const rawEnd = parseDate(it.plannedEnd) ?? parseDate(it.actualEnd);
+                  if (!rawStart && !rawEnd) return <div key={`tb${it.id}`} className="relative border-b border-gray-50" style={{ height: ROW_H }} />;
+                  const DEFAULT_DAYS = 5;
+                  const sDate = rawStart ?? (rawEnd ? new Date(rawEnd.getTime() - DEFAULT_DAYS * 86400000) : null)!;
+                  const eDate = rawEnd ?? (rawStart ? new Date(rawStart.getTime() + DEFAULT_DAYS * 86400000) : null);
                   const left = daysBetween(tStart, sDate) * ppd;
-                  const width = eDate ? Math.max(4, daysBetween(sDate, eDate) * ppd) : ppd * 2;
+                  const span = eDate ? daysBetween(sDate, eDate) : DEFAULT_DAYS;
+                  const width = Math.max(ppd * 2, span * ppd);
                   const barColor = STATUS_COLORS[it.status] ?? "#94a3b8";
                   return (
                     <div key={`tb${it.id}`} className="relative border-b border-gray-50 hover:bg-gray-50/50 group" style={{ height: ROW_H }}>

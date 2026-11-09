@@ -3,17 +3,12 @@
 import { useEffect, useState, useRef } from "react";
 import { appPath } from "@/lib/app-path";
 import Link from "next/link";
-import { BarChart3, FolderOpen, CheckCircle2, Clock, AlertTriangle, TrendingUp, Plus, Activity, ArrowUpRight } from "lucide-react";
+import { FolderOpen, CheckCircle2, Clock, AlertTriangle, Plus, ArrowUpRight } from "lucide-react";
 import NovoProjetoForm from "./components/novo-projeto-form";
 import NovaDemandaForm from "./components/nova-demanda-form";
 import { SkeletonDashboard } from "./components/skeleton";
 import { useToast } from "./components/toast";
 import { HealthPieChart, TasksPieChart, AreaBarChart, ProgressAreaChart } from "./components/dashboard-charts";
-
-type ActivityItem = {
-  id: number; action: string; entityType: string;
-  actorEmail: string | null; occurredAt: string | number | null;
-};
 
 type DashboardData = {
   projects: { total: number; planning: number; inProgress: number; completed: number; onTrack: number; attention: number; late: number };
@@ -22,7 +17,6 @@ type DashboardData = {
   timeTracking: { totalHoursLast30Days: number; entriesLast30Days: number };
   projectsByArea: Array<{ area: string; count: number }>;
   recentProjects: Array<{ id: number; name: string; status: string; health: string; progress: number }>;
-  recentActivity?: ActivityItem[];
 };
 
 function AnimatedCounter({ value, duration = 600 }: { value: number; duration?: number }) {
@@ -123,45 +117,6 @@ function HealthBadge({ health }: { health: string }) {
       {labels[health] ?? health}
     </span>
   );
-}
-
-const ACTION_LABELS: Record<string, string> = {
-  "project.created": "Criou um projeto",
-  "project.updated": "Atualizou um projeto",
-  "project_item.created": "Criou uma tarefa",
-  "project_item.updated": "Atualizou uma tarefa",
-  "epic.created": "Criou um épico",
-  "epic.updated": "Atualizou um épico",
-  "epic.deleted": "Removeu um épico",
-  "demand.created": "Criou uma demanda",
-  "demand.updated": "Atualizou uma demanda",
-  "time_entry.created": "Registrou horas",
-  "sprint.created": "Criou um sprint",
-};
-
-const ACTION_COLORS: Record<string, string> = {
-  created: "bg-emerald-500",
-  updated: "bg-blue-500",
-  deleted: "bg-red-500",
-};
-
-function formatTimeAgo(ts: string | number | null): string {
-  if (!ts) return "";
-  const date = typeof ts === "number" ? new Date(ts) : new Date(ts);
-  const diff = Date.now() - date.getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "agora";
-  if (mins < 60) return `${mins}min atrás`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h atrás`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d atrás`;
-}
-
-function emailToName(email: string | null): string {
-  if (!email) return "Sistema";
-  const local = email.split("@")[0];
-  return local.replace(/[._-]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
 
 export default function DashboardPage() {
@@ -283,39 +238,6 @@ export default function DashboardPage() {
           <HealthPieChart data={{ onTrack: d.projects.onTrack ?? 0, attention: d.projects.attention ?? 0, late: d.projects.late ?? 0 }} />
         </div>
       </div>
-
-      {/* Activity Feed */}
-      {d.recentActivity && d.recentActivity.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200/60 p-5 shadow-sm card-hover animate-fade-in">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <span className="w-1 h-5 bg-violet-500 rounded-full" />
-            <Activity size={18} className="text-violet-500" />
-            Atividade recente
-          </h2>
-          <div className="space-y-0.5">
-            {d.recentActivity.map((a) => {
-              const name = emailToName(a.actorEmail);
-              const verb = a.action.split(".").pop() ?? "";
-              const dotColor = ACTION_COLORS[verb] ?? "bg-gray-400";
-              return (
-                <div key={a.id} className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 rounded-lg -mx-1 px-2 transition-colors">
-                  <AvatarInitials name={name} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm text-gray-700">
-                      <span className="font-medium text-gray-900">{name}</span>{" "}
-                      {ACTION_LABELS[a.action] ?? a.action}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
-                    <span className="text-xs text-gray-400">{formatTimeAgo(a.occurredAt)}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-gray-200/60 p-5 shadow-sm card-hover animate-fade-in">

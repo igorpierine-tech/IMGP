@@ -113,7 +113,7 @@ export default function AppShell({ user, children }: { user: User; children: Rea
       )}
 
       <aside className={`
-        fixed inset-y-0 left-0 z-50 flex flex-col bg-gradient-to-b from-[#0c4a3e] to-[#083028] transition-all duration-200
+        fixed inset-y-0 left-0 z-50 flex flex-col overflow-hidden bg-gradient-to-b from-[#0c4a3e] to-[#083028] transition-all duration-200
         ${collapsed ? "w-16" : "w-60"}
         ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0 lg:static

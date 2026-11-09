@@ -5,6 +5,7 @@ import { appPath } from "@/lib/app-path";
 import { Loader2, Plus, Pencil, Trash2, Layers, ChevronDown, ListTree } from "lucide-react";
 import Breadcrumbs from "../components/breadcrumbs";
 import FormDialog, { FormField, FormActions, inputClass, selectClass } from "../components/form-dialog";
+import BulkActionBar from "../components/bulk-action-bar";
 import { useToast } from "../components/toast";
 import { SortableHeader, useSortableTable, type ColumnDef } from "../components/sortable-header";
 
@@ -76,6 +77,14 @@ export default function EpicosPage() {
   const [plannedStart, setPlannedStart] = useState("");
   const [plannedEnd, setPlannedEnd] = useState("");
   const [groupName, setGroupName] = useState("");
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  function toggleSelect(id: number) {
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  }
+  function toggleAll(ids: number[]) {
+    setSelectedIds((prev) => ids.every((id) => prev.includes(id)) ? prev.filter((x) => !ids.includes(x)) : [...new Set([...prev, ...ids])]);
+  }
 
   function loadEpics() {
     const url = filterProject === "all"
@@ -184,6 +193,9 @@ export default function EpicosPage() {
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm">{error}</div>}
 
+      <BulkActionBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} onDone={loadEpics} toast={toast}
+        statusOptions={STATUS_OPTIONS} />
+
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50/30 rounded-xl border border-gray-200/60 shadow-sm p-4 card-hover animate-scale-in stagger-1">
@@ -192,11 +204,11 @@ export default function EpicosPage() {
         </div>
         <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50/30 rounded-xl border border-gray-200/60 shadow-sm p-4 card-hover animate-scale-in stagger-2">
           <div className="text-sm text-gray-500">Em andamento</div>
-          <div className="text-2xl font-bold text-blue-600">{epics.filter(e => e.status === "Em andamento").length}</div>
+          <div className="text-2xl font-bold text-blue-600">{epics.filter(e => epicStatusLabel(e.status) === "Em andamento").length}</div>
         </div>
         <div className="bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30 rounded-xl border border-gray-200/60 shadow-sm p-4 card-hover animate-scale-in stagger-3">
           <div className="text-sm text-gray-500">Concluídos</div>
-          <div className="text-2xl font-bold text-emerald-600">{epics.filter(e => e.status === "Concluído").length}</div>
+          <div className="text-2xl font-bold text-emerald-600">{epics.filter(e => epicStatusLabel(e.status) === "Concluído").length}</div>
         </div>
         <div className="bg-gradient-to-br from-purple-50 via-white to-purple-50/30 rounded-xl border border-gray-200/60 shadow-sm p-4 card-hover animate-scale-in stagger-4">
           <div className="text-sm text-gray-500">Tarefas vinculadas</div>
@@ -206,14 +218,16 @@ export default function EpicosPage() {
 
       {/* Epics grouped by project */}
       {filterProject !== "all" ? (
-        <EpicsTable epics={epics} onEdit={openEdit} onDelete={handleDelete} formatDate={formatDate} />
+        <EpicsTable epics={epics} onEdit={openEdit} onDelete={handleDelete} formatDate={formatDate}
+          selectedIds={selectedIds} onToggle={toggleSelect} onToggleAll={toggleAll} />
       ) : (
         Array.from(grouped.entries()).map(([projectName, projectEpics]) => (
           <div key={projectName}>
             <h2 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
               <ListTree size={14} className="text-[#0c4a3e]" /> {projectName}
             </h2>
-            <EpicsTable epics={projectEpics} onEdit={openEdit} onDelete={handleDelete} formatDate={formatDate} />
+            <EpicsTable epics={projectEpics} onEdit={openEdit} onDelete={handleDelete} formatDate={formatDate}
+              selectedIds={selectedIds} onToggle={toggleSelect} onToggleAll={toggleAll} />
           </div>
         ))
       )}
@@ -265,8 +279,9 @@ export default function EpicosPage() {
   );
 }
 
-function EpicsTable({ epics, onEdit, onDelete, formatDate }: {
+function EpicsTable({ epics, onEdit, onDelete, formatDate, selectedIds, onToggle, onToggleAll }: {
   epics: Epic[]; onEdit: (e: Epic) => void; onDelete: (e: Epic) => void; formatDate: (d: string | null) => string;
+  selectedIds: number[]; onToggle: (id: number) => void; onToggleAll: (ids: number[]) => void;
 }) {
   const epicColumns: ColumnDef<Epic>[] = [
     { key: "name", label: "Nome", sortable: true, className: "text-left", getValue: (e) => e.name },
@@ -279,11 +294,17 @@ function EpicsTable({ epics, onEdit, onDelete, formatDate }: {
   ];
   const { toggleSort, setFilter, getSortDir, filters, sortAndFilter } = useSortableTable<Epic>(epics);
   const sorted = sortAndFilter(epics, epicColumns);
+  const allIds = sorted.map((e) => e.id);
+  const allChecked = allIds.length > 0 && allIds.every((id) => selectedIds.includes(id));
 
   return (
     <div className="bg-white rounded-xl border border-gray-200/60 shadow-sm overflow-hidden mb-4">
       <table className="w-full text-sm">
         <thead className="bg-gray-50 border-b"><tr>
+          <th className="w-10 px-3">
+            <input type="checkbox" checked={allChecked} onChange={() => onToggleAll(allIds)}
+              className="rounded border-gray-300 text-[#0c4a3e] focus:ring-[#0c4a3e]/30 cursor-pointer" />
+          </th>
           {epicColumns.map((col) => (
             <SortableHeader key={col.key} label={col.label} sortDir={getSortDir(col.key)} onSort={() => toggleSort(col.key)}
               sortable={col.sortable} filterable={col.filterable} filterOptions={col.filterOptions}
@@ -296,8 +317,13 @@ function EpicsTable({ epics, onEdit, onDelete, formatDate }: {
             const sc = STATUS_COLORS[epicStatusLabel(epic.status)] ?? "bg-gray-100 text-gray-600";
             const hc = HEALTH_COLORS[epic.health] ?? "bg-gray-100 text-gray-600";
             const hl = HEALTH_LABELS[epic.health] ?? epic.health;
+            const isSelected = selectedIds.includes(epic.id);
             return (
-              <tr key={epic.id} className="hover:bg-gray-50/80 transition-all group">
+              <tr key={epic.id} className={`hover:bg-gray-50/80 transition-all group ${isSelected ? "bg-emerald-50/50" : ""}`}>
+                <td className="px-3 py-3">
+                  <input type="checkbox" checked={isSelected} onChange={() => onToggle(epic.id)}
+                    className="rounded border-gray-300 text-[#0c4a3e] focus:ring-[#0c4a3e]/30 cursor-pointer" />
+                </td>
                 <td className="px-4 py-3">
                   <div className="font-medium text-gray-900 group-hover:text-[#0c4a3e] transition-colors">{epic.name}</div>
                   {epic.groupName && <div className="text-xs text-gray-400 mt-0.5">{epic.groupName}</div>}

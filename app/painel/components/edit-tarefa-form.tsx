@@ -52,7 +52,7 @@ export default function EditTarefaForm({ task, onClose, onSaved }: { task: Task;
       const r = await fetch(appPath("/api/project-items"), {
         method: "PATCH", credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: task.id, name: name.trim(), status, parentId: parentId ? Number(parentId) : null, sprintId: sprintId ? Number(sprintId) : null, assignedName: assignedName.trim() || null, plannedEnd: plannedEnd || null, plannedHours, priority: pri }),
+        body: JSON.stringify({ id: task.id, kind: task.kind, name: name.trim(), status, parentId: parentId ? Number(parentId) : null, sprintId: sprintId ? Number(sprintId) : null, assignedName: assignedName.trim() || null, plannedEnd: plannedEnd || null, plannedHours, priority: pri }),
       });
       if (!r.ok) { const b = await r.json() as { error?: string }; throw new Error(b.error ?? "Erro"); }
       onSaved();
