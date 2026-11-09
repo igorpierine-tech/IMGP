@@ -165,7 +165,25 @@ export default function GanttPage() {
   const [topH, botH] = useMemo(() => buildHeaders(scale, tStart, tDays, ppd), [scale, tStart, tDays, ppd]);
   const tlW = tDays * ppd;
   const todayPx = daysBetween(tStart, new Date()) * ppd;
-  const displayItems = useMemo(() => items.filter(i => parseDate(i.plannedStart) || parseDate(i.actualStart) || parseDate(i.plannedEnd) || parseDate(i.actualEnd)), [items]);
+  const displayItems = useMemo(() => {
+    const withDates = items.filter(i => parseDate(i.plannedStart) || parseDate(i.actualStart) || parseDate(i.plannedEnd) || parseDate(i.actualEnd));
+    const epicMap = new Map<number, GanttItem>();
+    for (const it of items) if (it.kind === "epic") epicMap.set(it.id, it);
+    function epicNum(name: string): number { const m = name.match(/^(\d+)/); return m ? parseInt(m[1], 10) : Infinity; }
+    function itemDate(it: GanttItem): string { return it.plannedEnd ?? it.plannedStart ?? it.actualEnd ?? it.actualStart ?? "￿"; }
+    function parentEpicNum(it: GanttItem): number {
+      if (it.kind === "epic") return epicNum(it.name);
+      const ep = it.parentId ? epicMap.get(it.parentId) : null;
+      return ep ? epicNum(ep.name) : Infinity;
+    }
+    return withDates.sort((a, b) => {
+      const ea = parentEpicNum(a), eb = parentEpicNum(b);
+      if (ea !== eb) return ea - eb;
+      if (a.kind === "epic" && b.kind !== "epic") return -1;
+      if (a.kind !== "epic" && b.kind === "epic") return 1;
+      return itemDate(a).localeCompare(itemDate(b));
+    });
+  }, [items]);
   const displaySprints = useMemo(() => sprints.filter(s => parseDate(s.startDate) && parseDate(s.endDate)), [sprints]);
 
   useEffect(() => {
