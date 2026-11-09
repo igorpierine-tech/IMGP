@@ -7,8 +7,10 @@ import { appPath } from "@/lib/app-path";
 import {
   LayoutDashboard, KanbanSquare, Target, FolderKanban, CalendarDays,
   BarChart3, ShieldCheck, Settings, Menu, X, ChevronLeft,
-  FileText, Search, Activity, Star, Users, ArrowLeft
+  FileText, Activity, Star, Users, ArrowLeft, Download,
 } from "lucide-react";
+import GlobalSearch from "./components/global-search";
+import NotificationDropdown from "./components/notification-dropdown";
 
 type User = { id: string; email: string; displayName: string; role: string };
 
@@ -23,6 +25,8 @@ const NAV_ITEMS = [
   { href: "/painel/demandas", label: "Demandas", icon: FileText },
   { href: "/painel/aprovacoes", label: "Aprovações", icon: ShieldCheck },
   { href: "/painel/atividade", label: "Atividade", icon: Activity },
+  { href: "/painel/usuarios", label: "Usuários", icon: Users },
+  { href: "/painel/exportar", label: "Exportar", icon: Download },
   { href: "/painel/preferencias", label: "Preferências", icon: Settings },
 ];
 
@@ -134,14 +138,8 @@ export default function AppShell({ user, children }: { user: User; children: Rea
             <Menu size={20} />
           </button>
           <div className="flex-1" />
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar projetos, tarefas..."
-              className="pl-9 pr-3 py-1.5 text-sm bg-gray-100 rounded-lg border-0 focus:ring-2 focus:ring-[#0c4a3e]/20 focus:bg-white w-48 lg:w-64 transition-all"
-            />
-          </div>
+          <GlobalSearch />
+          <NotificationDropdown />
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">

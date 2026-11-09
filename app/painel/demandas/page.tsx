@@ -35,6 +35,9 @@ export default function DemandasPage() {
   const [error, setError] = useState("");
   const [showNova, setShowNova] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [filterStage, setFilterStage] = useState("");
+  const [filterImpact, setFilterImpact] = useState("");
+  const [sortBy, setSortBy] = useState<"date" | "name" | "impact">("date");
 
   useEffect(() => {
     setLoading(true);
@@ -47,6 +50,15 @@ export default function DemandasPage() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [refreshKey]);
+
+  const impactOrder: Record<string, number> = { "Alto": 3, "Médio": 2, "Baixo": 1 };
+
+  let filtered = demands;
+  if (filterStage) filtered = filtered.filter((d) => d.stage === filterStage);
+  if (filterImpact) filtered = filtered.filter((d) => d.impact === filterImpact);
+  if (sortBy === "name") filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+  else if (sortBy === "impact") filtered = [...filtered].sort((a, b) => (impactOrder[b.impact] ?? 0) - (impactOrder[a.impact] ?? 0));
+  else filtered = [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   if (error) return <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">{error}</div>;
 
@@ -65,9 +77,26 @@ export default function DemandasPage() {
 
       <NovaDemandaForm open={showNova} onClose={() => setShowNova(false)} onCreated={() => setRefreshKey((k) => k + 1)} />
 
+      <div className="flex flex-wrap gap-3">
+        <select value={filterStage} onChange={(e) => setFilterStage(e.target.value)}
+          className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0c4a3e]/20 outline-none">
+          <option value="">Todos os estágios</option>
+          <option>Triagem</option><option>Em Análise</option><option>Aprovada</option><option>Rejeitada</option><option>Concluída</option>
+        </select>
+        <select value={filterImpact} onChange={(e) => setFilterImpact(e.target.value)}
+          className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0c4a3e]/20 outline-none">
+          <option value="">Todos os impactos</option>
+          <option>Baixo</option><option>Médio</option><option>Alto</option>
+        </select>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}
+          className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0c4a3e]/20 outline-none">
+          <option value="date">Mais recentes</option><option value="name">Nome A-Z</option><option value="impact">Maior impacto</option>
+        </select>
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center h-48 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando...</div>
-      ) : demands.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="bg-white rounded-xl border p-12 text-center">
           <FileText size={40} className="text-gray-300 mx-auto mb-3" />
           <h3 className="text-lg font-medium text-gray-600">Nenhuma demanda cadastrada</h3>
@@ -88,7 +117,7 @@ export default function DemandasPage() {
               </tr>
             </thead>
             <tbody>
-              {demands.map((d) => (
+              {filtered.map((d) => (
                 <tr key={d.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
                   <td className="p-3 font-medium text-gray-900 max-w-[250px] truncate">{d.name}</td>
                   <td className="p-3 text-gray-600">{d.area}</td>

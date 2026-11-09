@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
+import Link from "next/link";
 import { BarChart3, FolderOpen, CheckCircle2, Clock, AlertTriangle, TrendingUp, Loader2, Plus } from "lucide-react";
 import NovoProjetoForm from "./components/novo-projeto-form";
 import NovaDemandaForm from "./components/nova-demanda-form";
@@ -44,6 +45,57 @@ function ProgressBar({ value }: { value: number }) {
   return (
     <div className="w-full bg-gray-100 rounded-full h-2">
       <div className="bg-[#0c4a3e] h-2 rounded-full transition-all" style={{ width: `${Math.min(100, value)}%` }} />
+    </div>
+  );
+}
+
+function DonutChart({ segments, size = 120 }: { segments: { value: number; color: string; label: string }[]; size?: number }) {
+  const total = segments.reduce((s, seg) => s + seg.value, 0);
+  if (total === 0) return null;
+  const r = size / 2 - 8;
+  const cx = size / 2, cy = size / 2;
+  let cumAngle = -Math.PI / 2;
+  const paths = segments.filter((s) => s.value > 0).map((seg) => {
+    const angle = (seg.value / total) * 2 * Math.PI;
+    const x1 = cx + r * Math.cos(cumAngle);
+    const y1 = cy + r * Math.sin(cumAngle);
+    cumAngle += angle;
+    const x2 = cx + r * Math.cos(cumAngle);
+    const y2 = cy + r * Math.sin(cumAngle);
+    const large = angle > Math.PI ? 1 : 0;
+    return <path key={seg.label} d={`M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} Z`} fill={seg.color} />;
+  });
+  return (
+    <div className="flex items-center gap-4">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>{paths}<circle cx={cx} cy={cy} r={r * 0.55} fill="white" /></svg>
+      <div className="space-y-1">
+        {segments.filter((s) => s.value > 0).map((s) => (
+          <div key={s.label} className="flex items-center gap-2 text-xs">
+            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+            <span className="text-gray-600">{s.label}</span>
+            <span className="font-medium text-gray-900">{s.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BarChartSimple({ data }: { data: { label: string; value: number }[] }) {
+  const max = Math.max(...data.map((d) => d.value), 1);
+  return (
+    <div className="space-y-2">
+      {data.map((d) => (
+        <div key={d.label} className="flex items-center gap-3">
+          <span className="text-xs text-gray-600 w-24 truncate text-right">{d.label || "Sem área"}</span>
+          <div className="flex-1 bg-gray-100 rounded-full h-4 relative">
+            <div className="bg-[#0c4a3e] h-4 rounded-full transition-all flex items-center justify-end pr-1.5"
+              style={{ width: `${Math.max(8, (d.value / max) * 100)}%` }}>
+              <span className="text-[10px] text-white font-medium">{d.value}</span>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -111,7 +163,7 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-3">
               {d.recentProjects.map((p) => (
-                <div key={p.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
+                <Link key={p.id} href={`/painel/projeto?id=${p.id}`} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0 hover:bg-gray-50 rounded -mx-2 px-2 transition-colors">
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-900 truncate">{p.name}</div>
                     <div className="flex items-center gap-2 mt-1">
@@ -123,55 +175,57 @@ export default function DashboardPage() {
                     <div className="text-xs text-right text-gray-500 mb-1">{p.progress}%</div>
                     <ProgressBar value={p.progress} />
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Projetos por área</h2>
-          {d.projectsByArea.length === 0 ? (
-            <p className="text-sm text-gray-400">Nenhuma área encontrada.</p>
-          ) : (
-            <div className="space-y-3">
-              {d.projectsByArea.map((a) => (
-                <div key={a.area} className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700 truncate">{a.area || "Sem área"}</span>
-                  <span className="text-sm font-semibold text-gray-900 bg-gray-100 px-2 py-0.5 rounded">{a.count}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Saúde dos projetos</h2>
+          <DonutChart size={100} segments={[
+            { value: d.projects.onTrack ?? 0, color: "#10b981", label: "No prazo" },
+            { value: d.projects.attention ?? 0, color: "#f59e0b", label: "Atenção" },
+            { value: d.projects.late ?? 0, color: "#ef4444", label: "Atrasado" },
+          ]} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-medium text-gray-500 mb-3">Status dos projetos</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm"><span className="text-gray-600">Planejamento</span><span className="font-medium">{d.projects.planning}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-gray-600">Em andamento</span><span className="font-medium">{d.projects.inProgress}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-gray-600">Concluídos</span><span className="font-medium">{d.projects.completed}</span></div>
-          </div>
+          <h3 className="text-sm font-medium text-gray-500 mb-4">Status dos projetos</h3>
+          <DonutChart segments={[
+            { value: d.projects.planning, color: "#94a3b8", label: "Planejamento" },
+            { value: d.projects.inProgress, color: "#3b82f6", label: "Em andamento" },
+            { value: d.projects.completed, color: "#10b981", label: "Concluídos" },
+          ]} />
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-medium text-gray-500 mb-3">Tarefas</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm"><span className="text-gray-600">Em progresso</span><span className="font-medium">{d.tasks.inProgress}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-gray-600">Bloqueadas</span><span className="font-medium text-red-600">{d.tasks.blocked}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-gray-600">Concluídas</span><span className="font-medium text-emerald-600">{d.tasks.done}</span></div>
-          </div>
+          <h3 className="text-sm font-medium text-gray-500 mb-4">Tarefas</h3>
+          <DonutChart segments={[
+            { value: d.tasks.planned, color: "#94a3b8", label: "Planejadas" },
+            { value: d.tasks.inProgress, color: "#3b82f6", label: "Em progresso" },
+            { value: d.tasks.blocked, color: "#ef4444", label: "Bloqueadas" },
+            { value: d.tasks.done, color: "#10b981", label: "Concluídas" },
+          ]} />
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-medium text-gray-500 mb-3">Demandas</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm"><span className="text-gray-600">Total</span><span className="font-medium">{d.demands.total}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-gray-600">Triagem</span><span className="font-medium">{d.demands.triagem}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-gray-600">Aprovadas</span><span className="font-medium">{d.demands.aprovada}</span></div>
-          </div>
+          <h3 className="text-sm font-medium text-gray-500 mb-4">Demandas</h3>
+          <DonutChart segments={[
+            { value: d.demands.triagem, color: "#94a3b8", label: "Triagem" },
+            { value: d.demands.emAnalise, color: "#3b82f6", label: "Em análise" },
+            { value: d.demands.aprovada, color: "#10b981", label: "Aprovadas" },
+            { value: d.demands.rejeitada, color: "#ef4444", label: "Rejeitadas" },
+          ]} />
         </div>
       </div>
+
+      {d.projectsByArea.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="text-sm font-medium text-gray-500 mb-4">Projetos por área</h3>
+          <BarChartSimple data={d.projectsByArea.slice(0, 8).map((a) => ({ label: a.area, value: a.count }))} />
+        </div>
+      )}
     </div>
   );
 }
