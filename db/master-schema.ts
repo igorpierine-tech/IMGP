@@ -21,6 +21,8 @@ export const tenants = sqliteTable("tenants", {
   domain: text("domain"),
   dbFileName: text("db_file_name").notNull(),
   settingsJson: text("settings_json"),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
   maxUsers: integer("max_users").notNull().default(10),
   trialEndsAt: integer("trial_ends_at", { mode: "timestamp_ms" }),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),

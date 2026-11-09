@@ -26,6 +26,9 @@ export const users = sqliteTable("users", {
   failedLoginAttempts: integer("failed_login_attempts").notNull().default(0),
   lockedUntil: integer("locked_until", { mode: "timestamp_ms" }),
   invitedBy: text("invited_by"),
+  totpSecret: text("totp_secret"),
+  totpEnabled: integer("totp_enabled", { mode: "boolean" }).notNull().default(false),
+  totpVerifiedAt: integer("totp_verified_at", { mode: "timestamp_ms" }),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
   lastSeenAt: integer("last_seen_at", { mode: "timestamp_ms" }).notNull().default(now),
 });
@@ -238,6 +241,100 @@ export const rolePermissions = sqliteTable("role_permissions", {
 }, (table) => [
   uniqueIndex("role_permissions_unique_idx").on(table.roleId, table.moduleKey, table.action),
   index("role_permissions_role_idx").on(table.roleId),
+]);
+
+export const rateLimitEntries = sqliteTable("rate_limit_entries", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull().default(0),
+  windowStart: integer("window_start").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+}, (table) => [
+  index("rate_limit_expires_idx").on(table.expiresAt),
+]);
+
+export const userConsents = sqliteTable("user_consents", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  consentType: text("consent_type").notNull(),
+  version: text("version").notNull().default("1.0"),
+  accepted: integer("accepted", { mode: "boolean" }).notNull().default(false),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  acceptedAt: integer("accepted_at", { mode: "timestamp_ms" }),
+  revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  uniqueIndex("user_consents_user_type_idx").on(table.userId, table.consentType),
+]);
+
+export const notifications = sqliteTable("notifications", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  body: text("body"),
+  entityType: text("entity_type"),
+  entityId: text("entity_id"),
+  read: integer("read", { mode: "boolean" }).notNull().default(false),
+  readAt: integer("read_at", { mode: "timestamp_ms" }),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  index("notifications_user_read_idx").on(table.userId, table.read, table.createdAt),
+]);
+
+export const comments = sqliteTable("comments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  entityType: text("entity_type").notNull(),
+  entityId: integer("entity_id").notNull(),
+  parentId: integer("parent_id"),
+  userId: text("user_id").notNull().references(() => users.id),
+  body: text("body").notNull(),
+  mentionsJson: text("mentions_json"),
+  editedAt: integer("edited_at", { mode: "timestamp_ms" }),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  index("comments_entity_idx").on(table.entityType, table.entityId, table.createdAt),
+  index("comments_user_idx").on(table.userId),
+]);
+
+export const webhooks = sqliteTable("webhooks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  url: text("url").notNull(),
+  secret: text("secret").notNull(),
+  eventsJson: text("events_json").notNull().default("[]"),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdBy: text("created_by").references(() => users.id),
+  lastTriggeredAt: integer("last_triggered_at", { mode: "timestamp_ms" }),
+  failureCount: integer("failure_count").notNull().default(0),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(now),
+});
+
+export const webhookDeliveries = sqliteTable("webhook_deliveries", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  webhookId: integer("webhook_id").notNull().references(() => webhooks.id, { onDelete: "cascade" }),
+  event: text("event").notNull(),
+  payloadJson: text("payload_json").notNull(),
+  responseStatus: integer("response_status"),
+  responseBody: text("response_body"),
+  durationMs: integer("duration_ms"),
+  success: integer("success", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  index("webhook_deliveries_webhook_idx").on(table.webhookId, table.createdAt),
+]);
+
+export const taskDependencies = sqliteTable("task_dependencies", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  predecessorId: integer("predecessor_id").notNull().references(() => projectItems.id, { onDelete: "cascade" }),
+  successorId: integer("successor_id").notNull().references(() => projectItems.id, { onDelete: "cascade" }),
+  type: text("type").notNull().default("finish_to_start"),
+  lagDays: integer("lag_days").notNull().default(0),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  uniqueIndex("task_deps_unique_idx").on(table.predecessorId, table.successorId),
+  index("task_deps_successor_idx").on(table.successorId),
 ]);
 
 export const auditEvents = sqliteTable("audit_events", {

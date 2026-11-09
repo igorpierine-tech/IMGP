@@ -99,6 +99,13 @@
       "when": 1794355200000,
       "tag": "0013_session_tenant_id",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1794441600000,
+      "tag": "0014_security_and_features",
+      "breakpoints": true
     }
   ]
 }
