@@ -337,6 +337,52 @@ export const taskDependencies = sqliteTable("task_dependencies", {
   index("task_deps_successor_idx").on(table.successorId),
 ]);
 
+export const customFieldDefinitions = sqliteTable("custom_field_definitions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  entityType: text("entity_type").notNull(),
+  fieldKey: text("field_key").notNull(),
+  label: text("label").notNull(),
+  fieldType: text("field_type").notNull().default("text"),
+  optionsJson: text("options_json"),
+  required: integer("required", { mode: "boolean" }).notNull().default(false),
+  sequence: integer("sequence").notNull().default(0),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdBy: text("created_by").references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  uniqueIndex("custom_field_defs_entity_key_idx").on(table.entityType, table.fieldKey),
+]);
+
+export const customFieldValues = sqliteTable("custom_field_values", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  fieldId: integer("field_id").notNull().references(() => customFieldDefinitions.id, { onDelete: "cascade" }),
+  entityId: integer("entity_id").notNull(),
+  valueText: text("value_text"),
+  valueNumber: real("value_number"),
+  valueDate: text("value_date"),
+  valueJson: text("value_json"),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  uniqueIndex("custom_field_values_field_entity_idx").on(table.fieldId, table.entityId),
+  index("custom_field_values_entity_idx").on(table.entityId),
+]);
+
+export const attachments = sqliteTable("attachments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  entityType: text("entity_type").notNull(),
+  entityId: integer("entity_id").notNull(),
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size").notNull(),
+  contentType: text("content_type").notNull(),
+  storageKey: text("storage_key").notNull(),
+  uploadedBy: text("uploaded_by").notNull().references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  index("attachments_entity_idx").on(table.entityType, table.entityId),
+  index("attachments_user_idx").on(table.uploadedBy),
+]);
+
 export const auditEvents = sqliteTable("audit_events", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   occurredAt: integer("occurred_at", { mode: "timestamp_ms" }).notNull().default(now),
