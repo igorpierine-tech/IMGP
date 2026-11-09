@@ -4,6 +4,7 @@ import { AppRole, HttpError, roles } from "@/lib/server/authz";
 import { errorMessage } from "@/lib/server/errors";
 import { hashPassword, normalizeEmail, validatePassword } from "@/lib/server/password-auth";
 import { writeAudit } from "@/lib/server/audit";
+import { sendWelcomeEmail } from "@/lib/server/email";
 import { getApiContext, checkPermissionOrRole } from "@/lib/server/api-context";
 
 const managers = ["project_coordinator", "it_director"] as const;
@@ -45,6 +46,8 @@ export async function POST(request: Request) {
       mustChangePassword: true, invitedBy: ctx.user.id,
     }).returning({ id: users.id, email: users.email, displayName: users.displayName, role: users.role, active: users.active, mustChangePassword: users.mustChangePassword });
     await writeAudit({ actor: ctx.user, action: "user.created", entityType: "user", entityId: created.id, requestId: request.headers.get("cf-ray"), after: created, db: ctx.db });
+    const origin = new URL(request.url).origin;
+    sendWelcomeEmail(email, displayName, password, `${origin}/Projetos/login`).catch(() => {});
     return Response.json({ user: created }, { status: 201 });
   } catch (error) {
     return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
