@@ -4,6 +4,7 @@ import { userSessions, users } from "@/db/schema";
 import { createPasswordSession, hashPassword, passwordSessionCookieName, passwordSessionCookieOptions, validatePassword, verifyPassword } from "@/lib/server/password-auth";
 import { appUrl } from "@/lib/app-path";
 import { getApiContext } from "@/lib/server/api-context";
+import { verifyCsrfToken } from "@/lib/server/csrf";
 
 export async function POST(request: Request) {
   const ctx = await getApiContext(request);
@@ -12,6 +13,8 @@ export async function POST(request: Request) {
   const password = String(form.get("password") || "");
   const confirmation = String(form.get("confirmation") || "");
   const fail = (message: string) => NextResponse.redirect(appUrl(`/alterar-senha?error=${encodeURIComponent(message)}`, request.url), 303);
+  const csrfError = await verifyCsrfToken(request, form.get("_csrf") as string | null);
+  if (csrfError) return fail(csrfError);
   const [stored] = await ctx.db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
   if (!stored?.passwordHash || !stored.passwordSalt) return fail("Esta conta utiliza autenticação corporativa.");
   if (!await verifyPassword(currentPassword, stored.passwordSalt, stored.passwordHash, stored.passwordIterations)) return fail("A senha atual não confere.");

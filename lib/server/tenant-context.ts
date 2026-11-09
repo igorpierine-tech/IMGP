@@ -83,11 +83,7 @@ export async function getTenantContext(request: Request): Promise<TenantContext>
   const tenantBinding = (env as Record<string, unknown>)[bindingName] as D1Database | undefined;
 
   if (!tenantBinding) {
-    const defaultBinding = env.DB;
-    if (!defaultBinding) {
-      throw new HttpError(500, "Banco de dados do tenant não disponível.");
-    }
-    return { tenant, db: getTenantDb(defaultBinding) };
+    throw new HttpError(500, `Banco de dados do tenant "${tenant.slug}" não configurado. Binding esperado: ${bindingName}`);
   }
 
   return { tenant, db: getTenantDb(tenantBinding) };

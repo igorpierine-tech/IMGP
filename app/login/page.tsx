@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/server/authz";
 import { entraConfiguration, safeReturnPath } from "@/lib/server/entra-auth";
 import { appPath } from "@/lib/app-path";
+import { getCsrfToken } from "@/lib/server/csrf";
 
 type LoginPageProps = {
   searchParams: Promise<{ return_to?: string; error?: string; setup?: string }>;
@@ -14,6 +15,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const returnTo = safeReturnPath(params.return_to);
   const config = entraConfiguration();
   const setupMode = params.setup === "1";
+  const csrfToken = await getCsrfToken();
 
   return (
     <main className="login-page">
@@ -33,6 +35,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         {params.error ? <div className="login-error" role="alert">{params.error}</div> : null}
         {setupMode ? (
           <form className="login-form" action={appPath("/api/auth/bootstrap")} method="post">
+            <input type="hidden" name="_csrf" value={csrfToken} />
             <label>Token de ativação<input name="setupToken" type="password" autoComplete="off" required /></label>
             <label>Nome completo<input name="displayName" autoComplete="name" required /></label>
             <label>E-mail corporativo<input name="email" type="email" autoComplete="email" required /></label>
@@ -43,6 +46,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         ) : (
           <>
             <form className="login-form" action={appPath("/api/auth/login")} method="post">
+              <input type="hidden" name="_csrf" value={csrfToken} />
               <input type="hidden" name="returnTo" value={returnTo} />
               <label>E-mail corporativo<input name="email" type="email" autoComplete="username" required /></label>
               <label>Senha<input name="password" type="password" autoComplete="current-password" required /></label>

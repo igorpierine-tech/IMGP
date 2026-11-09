@@ -5,9 +5,14 @@ import { getDb } from "@/db";
 import { users } from "@/db/schema";
 import { createPasswordSession, hashPassword, normalizeEmail, passwordSessionCookieName, passwordSessionCookieOptions, validatePassword } from "@/lib/server/password-auth";
 import { appUrl } from "@/lib/app-path";
+import { verifyCsrfToken } from "@/lib/server/csrf";
 
 export async function POST(request: Request) {
   const form = await request.formData();
+  const csrfError = await verifyCsrfToken(request, form.get("_csrf") as string | null);
+  if (csrfError) {
+    return NextResponse.redirect(appUrl(`/login?setup=1&error=${encodeURIComponent(csrfError)}`, request.url), 303);
+  }
   const token = String(form.get("setupToken") || "");
   const cfEnv = env as unknown as Record<string, string | undefined>;
   const expectedToken = cfEnv.AUTH_BOOTSTRAP_TOKEN || process.env.AUTH_BOOTSTRAP_TOKEN || "";

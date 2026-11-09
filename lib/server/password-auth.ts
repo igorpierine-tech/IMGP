@@ -9,7 +9,7 @@ const SESSION_SECONDS = 8 * 60 * 60;
 // Cloudflare Workers Web Crypto currently caps PBKDF2 at 100,000 iterations.
 export const PASSWORD_ITERATIONS = 100000;
 
-export async function getPasswordUser() {
+export async function getPasswordUser(requestTenantId?: string) {
   const rawToken = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!rawToken) return null;
   const sessionId = await sha256Hex(rawToken);
@@ -21,6 +21,11 @@ export async function getPasswordUser() {
     .where(and(eq(userSessions.id, sessionId), gt(userSessions.expiresAt, now)))
     .limit(1);
   if (!row?.user.active) return null;
+
+  if (requestTenantId && row.session.tenantId && row.session.tenantId !== requestTenantId) {
+    return null;
+  }
+
   await getDb().batch([
     getDb().update(userSessions).set({ lastSeenAt: now }).where(eq(userSessions.id, sessionId)),
     getDb().update(users).set({ lastSeenAt: now }).where(eq(users.id, row.user.id)),
