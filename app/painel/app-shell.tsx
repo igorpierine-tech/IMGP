@@ -15,6 +15,7 @@ import {
 import GlobalSearch from "./components/global-search";
 import NotificationDropdown from "./components/notification-dropdown";
 import DarkModeToggle from "./components/dark-mode-toggle";
+import AiChat from "./components/ai-chat";
 
 type User = { id: string; email: string; displayName: string; role: string };
 
@@ -209,6 +210,7 @@ export default function AppShell({ user, children }: { user: User; children: Rea
           {children}
         </main>
       </div>
+      <AiChat />
     </div>
   );
 }
