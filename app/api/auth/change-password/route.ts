@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   await ctx.db.update(users).set({ passwordHash: data.hash, passwordSalt: data.salt, passwordIterations: data.iterations, passwordSetAt: new Date(), mustChangePassword: false }).where(eq(users.id, ctx.user.id));
   await ctx.db.delete(userSessions).where(eq(userSessions.userId, ctx.user.id));
   const session = await createPasswordSession(ctx.user.id);
-  const response = NextResponse.redirect(appUrl("/legacy", request.url), 303);
+  const response = NextResponse.redirect(appUrl("/painel", request.url), 303);
   response.cookies.set(passwordSessionCookieName(), session, passwordSessionCookieOptions());
   return response;
 }

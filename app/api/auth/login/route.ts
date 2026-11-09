@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   const form = await request.formData();
   const email = normalizeEmail(form.get("email"));
   const password = String(form.get("password") || "");
-  const returnTo = safeReturnPath(String(form.get("returnTo") || "/legacy"));
+  const returnTo = safeReturnPath(String(form.get("returnTo") || "/painel"));
   const fail = (message: string) => NextResponse.redirect(appUrl(`/login?error=${encodeURIComponent(message)}&return_to=${encodeURIComponent(returnTo)}`, request.url), 303);
 
   const csrfError = await verifyCsrfToken(request, form.get("_csrf") as string | null);

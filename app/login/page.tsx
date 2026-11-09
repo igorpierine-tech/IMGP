@@ -10,7 +10,7 @@ type LoginPageProps = {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const user = await getCurrentUser();
-  if (user) redirect("/legacy");
+  if (user) redirect("/painel");
   const params = await searchParams;
   const returnTo = safeReturnPath(params.return_to);
   const config = entraConfiguration();

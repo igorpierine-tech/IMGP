@@ -13,5 +13,5 @@ export default async function Home() {
     // cloudflare:workers not available
   }
 
-  redirect(hasMasterDb ? "/workspaces" : "/legacy");
+  redirect(hasMasterDb ? "/workspaces" : "/painel");
 }

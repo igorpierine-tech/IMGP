@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     });
   }
   const session = await createPasswordSession(userId);
-  const response = NextResponse.redirect(appUrl("/legacy", request.url), 303);
+  const response = NextResponse.redirect(appUrl("/painel", request.url), 303);
   response.cookies.set(passwordSessionCookieName(), session, passwordSessionCookieOptions());
   return response;
 }
