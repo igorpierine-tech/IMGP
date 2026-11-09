@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { appPath } from "@/lib/app-path";
 import Link from "next/link";
-import { BarChart3, FolderOpen, CheckCircle2, Clock, AlertTriangle, TrendingUp, Plus } from "lucide-react";
+import { BarChart3, FolderOpen, CheckCircle2, Clock, AlertTriangle, TrendingUp, Plus, Activity, ArrowUpRight } from "lucide-react";
 import NovoProjetoForm from "./components/novo-projeto-form";
 import NovaDemandaForm from "./components/nova-demanda-form";
 import { SkeletonDashboard } from "./components/skeleton";
 import { useToast } from "./components/toast";
 import { HealthPieChart, TasksPieChart, AreaBarChart, ProgressAreaChart } from "./components/dashboard-charts";
+
+type ActivityItem = {
+  id: number; action: string; entityType: string;
+  actorEmail: string | null; occurredAt: string | number | null;
+};
 
 type DashboardData = {
   projects: { total: number; planning: number; inProgress: number; completed: number; onTrack: number; attention: number; late: number };
@@ -17,19 +22,86 @@ type DashboardData = {
   timeTracking: { totalHoursLast30Days: number; entriesLast30Days: number };
   projectsByArea: Array<{ area: string; count: number }>;
   recentProjects: Array<{ id: number; name: string; status: string; health: string; progress: number }>;
+  recentActivity?: ActivityItem[];
 };
 
-function StatCard({ icon: Icon, label, value, sub, color, gradient }: { icon: any; label: string; value: string | number; sub?: string; color: string; gradient: string }) {
+function AnimatedCounter({ value, duration = 600 }: { value: number; duration?: number }) {
+  const [display, setDisplay] = useState(0);
+  const ref = useRef<number | null>(null);
+  useEffect(() => {
+    if (ref.current !== null) cancelAnimationFrame(ref.current);
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reducedMotion) { setDisplay(value); return; }
+    const start = performance.now();
+    const from = display;
+    function tick(now: number) {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplay(Math.round(from + (value - from) * eased));
+      if (t < 1) ref.current = requestAnimationFrame(tick);
+    }
+    ref.current = requestAnimationFrame(tick);
+    return () => { if (ref.current !== null) cancelAnimationFrame(ref.current); };
+  }, [value, duration]);
+  return <>{display}</>;
+}
+
+function AvatarInitials({ name, size = "md" }: { name: string; size?: "sm" | "md" }) {
+  const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  const colors = [
+    "bg-blue-500", "bg-emerald-500", "bg-purple-500", "bg-amber-500",
+    "bg-rose-500", "bg-cyan-500", "bg-indigo-500", "bg-teal-500",
+  ];
+  const idx = name.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length;
+  const s = size === "sm" ? "w-6 h-6 text-[10px]" : "w-8 h-8 text-xs";
   return (
-    <div className={`relative overflow-hidden rounded-xl border border-gray-200/60 p-5 flex items-start gap-4 ${gradient}`}>
+    <div className={`${s} rounded-full ${colors[idx]} text-white flex items-center justify-center font-semibold shrink-0 ring-2 ring-white`}>
+      {initials}
+    </div>
+  );
+}
+
+function Sparkline({ values, color = "#10b981", width = 60, height = 24 }: { values: number[]; color?: string; width?: number; height?: number }) {
+  if (values.length < 2) return null;
+  const max = Math.max(...values, 1);
+  const min = Math.min(...values, 0);
+  const range = max - min || 1;
+  const points = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * width;
+    const y = height - ((v - min) / range) * (height - 4) - 2;
+    return `${x},${y}`;
+  }).join(" ");
+  return (
+    <svg width={width} height={height} className="shrink-0">
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function GradientProgressBar({ value }: { value: number }) {
+  return (
+    <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+      <div className="progress-gradient h-2 rounded-full" style={{ width: `${Math.min(100, value)}%` }} />
+    </div>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, sub, color, gradient, sparkValues }: {
+  icon: any; label: string; value: number; sub?: string; color: string; gradient: string; sparkValues?: number[];
+}) {
+  return (
+    <div className={`relative overflow-hidden rounded-xl border border-gray-200/60 p-5 flex items-start gap-4 card-hover ${gradient}`}>
       <div className="absolute top-0 right-0 w-24 h-24 opacity-[0.07] -mr-6 -mt-6">
         <Icon size={96} />
       </div>
       <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${color} shadow-sm`}>
         <Icon size={20} />
       </div>
-      <div className="relative">
-        <div className="text-3xl font-extrabold text-gray-900">{value}</div>
+      <div className="relative flex-1 min-w-0">
+        <div className="flex items-end gap-2">
+          <div className="text-3xl font-extrabold text-gray-900"><AnimatedCounter value={value} /></div>
+          {sparkValues && <Sparkline values={sparkValues} />}
+        </div>
         <div className="text-sm font-medium text-gray-600 mt-0.5">{label}</div>
         {sub && <div className="text-xs text-gray-400 mt-1">{sub}</div>}
       </div>
@@ -39,71 +111,57 @@ function StatCard({ icon: Icon, label, value, sub, color, gradient }: { icon: an
 
 function HealthBadge({ health }: { health: string }) {
   const styles: Record<string, string> = {
-    on_track: "bg-emerald-100 text-emerald-700",
-    attention: "bg-amber-100 text-amber-700",
-    late: "bg-red-100 text-red-700",
+    on_track: "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200",
+    attention: "bg-amber-100 text-amber-700 ring-1 ring-amber-200",
+    late: "bg-red-100 text-red-700 ring-1 ring-red-200",
   };
   const labels: Record<string, string> = { on_track: "No prazo", attention: "Atenção", late: "Atrasado" };
-  return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[health] ?? "bg-gray-100 text-gray-600"}`}>{labels[health] ?? health}</span>;
-}
-
-function ProgressBar({ value }: { value: number }) {
+  const dots: Record<string, string> = { on_track: "bg-emerald-500", attention: "bg-amber-500", late: "bg-red-500" };
   return (
-    <div className="w-full bg-gray-100 rounded-full h-2">
-      <div className="bg-[#0c4a3e] h-2 rounded-full transition-all" style={{ width: `${Math.min(100, value)}%` }} />
-    </div>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[health] ?? "bg-gray-100 text-gray-600"}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${dots[health] ?? "bg-gray-400"}`} />
+      {labels[health] ?? health}
+    </span>
   );
 }
 
-function DonutChart({ segments, size = 120 }: { segments: { value: number; color: string; label: string }[]; size?: number }) {
-  const total = segments.reduce((s, seg) => s + seg.value, 0);
-  if (total === 0) return null;
-  const r = size / 2 - 8;
-  const cx = size / 2, cy = size / 2;
-  let cumAngle = -Math.PI / 2;
-  const paths = segments.filter((s) => s.value > 0).map((seg) => {
-    const angle = (seg.value / total) * 2 * Math.PI;
-    const x1 = cx + r * Math.cos(cumAngle);
-    const y1 = cy + r * Math.sin(cumAngle);
-    cumAngle += angle;
-    const x2 = cx + r * Math.cos(cumAngle);
-    const y2 = cy + r * Math.sin(cumAngle);
-    const large = angle > Math.PI ? 1 : 0;
-    return <path key={seg.label} d={`M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} Z`} fill={seg.color} />;
-  });
-  return (
-    <div className="flex items-center gap-4">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>{paths}<circle cx={cx} cy={cy} r={r * 0.55} fill="white" /></svg>
-      <div className="space-y-1">
-        {segments.filter((s) => s.value > 0).map((s) => (
-          <div key={s.label} className="flex items-center gap-2 text-xs">
-            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
-            <span className="text-gray-600">{s.label}</span>
-            <span className="font-medium text-gray-900">{s.value}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+const ACTION_LABELS: Record<string, string> = {
+  "project.created": "Criou um projeto",
+  "project.updated": "Atualizou um projeto",
+  "project_item.created": "Criou uma tarefa",
+  "project_item.updated": "Atualizou uma tarefa",
+  "epic.created": "Criou um épico",
+  "epic.updated": "Atualizou um épico",
+  "epic.deleted": "Removeu um épico",
+  "demand.created": "Criou uma demanda",
+  "demand.updated": "Atualizou uma demanda",
+  "time_entry.created": "Registrou horas",
+  "sprint.created": "Criou um sprint",
+};
+
+const ACTION_COLORS: Record<string, string> = {
+  created: "bg-emerald-500",
+  updated: "bg-blue-500",
+  deleted: "bg-red-500",
+};
+
+function formatTimeAgo(ts: string | number | null): string {
+  if (!ts) return "";
+  const date = typeof ts === "number" ? new Date(ts) : new Date(ts);
+  const diff = Date.now() - date.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "agora";
+  if (mins < 60) return `${mins}min atrás`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h atrás`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d atrás`;
 }
 
-function BarChartSimple({ data }: { data: { label: string; value: number }[] }) {
-  const max = Math.max(...data.map((d) => d.value), 1);
-  return (
-    <div className="space-y-2">
-      {data.map((d) => (
-        <div key={d.label} className="flex items-center gap-3">
-          <span className="text-xs text-gray-600 w-24 truncate text-right">{d.label || "Sem área"}</span>
-          <div className="flex-1 bg-gray-100 rounded-full h-4 relative">
-            <div className="bg-[#0c4a3e] h-4 rounded-full transition-all flex items-center justify-end pr-1.5"
-              style={{ width: `${Math.max(8, (d.value / max) * 100)}%` }}>
-              <span className="text-[10px] text-white font-medium">{d.value}</span>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+function emailToName(email: string | null): string {
+  if (!email) return "Sistema";
+  const local = email.split("@")[0];
+  return local.replace(/[._-]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
 
 export default function DashboardPage() {
@@ -133,10 +191,11 @@ export default function DashboardPage() {
 
   const d = data!;
   const hoursLogged = d.timeTracking?.totalHoursLast30Days ?? 0;
+  const taskDoneRatio = d.tasks.total > 0 ? Math.round((d.tasks.done / d.tasks.total) * 100) : 0;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3 bg-gradient-to-r from-[#0c4a3e] to-[#0e6b56] rounded-xl p-5 -mx-1 shadow-md">
+      <div className="flex items-center justify-between flex-wrap gap-3 bg-gradient-to-r from-[#0c4a3e] to-[#0e6b56] rounded-xl p-5 -mx-1 shadow-md animate-fade-in">
         <div>
           <h1 className="text-2xl font-bold text-white">Dashboard</h1>
           <p className="text-sm text-emerald-200/70 mt-1">Visão geral de todos os projetos e indicadores</p>
@@ -156,34 +215,59 @@ export default function DashboardPage() {
       <NovaDemandaForm open={showNovaDemanda} onClose={() => setShowNovaDemanda(false)} onCreated={() => { toast("Demanda criada com sucesso"); window.location.reload(); }} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={FolderOpen} label="Projetos ativos" value={d.projects.inProgress} sub={`${d.projects.total} no total`} color="bg-blue-500 text-white" gradient="bg-gradient-to-br from-blue-50 via-white to-blue-50/30" />
-        <StatCard icon={CheckCircle2} label="Tarefas concluídas" value={d.tasks.done} sub={`de ${d.tasks.total}`} color="bg-emerald-500 text-white" gradient="bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30" />
-        <StatCard icon={Clock} label="Horas registradas" value={hoursLogged} sub={`${d.timeTracking?.entriesLast30Days ?? 0} lançamentos`} color="bg-purple-500 text-white" gradient="bg-gradient-to-br from-purple-50 via-white to-purple-50/30" />
-        <StatCard icon={AlertTriangle} label="Projetos em atenção" value={(d.projects.attention ?? 0) + (d.projects.late ?? 0)} sub={`${d.projects.onTrack ?? 0} no prazo`} color="bg-amber-500 text-white" gradient="bg-gradient-to-br from-amber-50 via-white to-amber-50/30" />
+        <div className="animate-scale-in stagger-1">
+          <StatCard icon={FolderOpen} label="Projetos ativos" value={d.projects.inProgress}
+            sub={`${d.projects.total} no total`}
+            color="bg-blue-500 text-white" gradient="bg-gradient-to-br from-blue-50 via-white to-blue-50/30"
+            sparkValues={[d.projects.planning, d.projects.inProgress, d.projects.completed]} />
+        </div>
+        <div className="animate-scale-in stagger-2">
+          <StatCard icon={CheckCircle2} label="Tarefas concluídas" value={d.tasks.done}
+            sub={`${taskDoneRatio}% do total`}
+            color="bg-emerald-500 text-white" gradient="bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30"
+            sparkValues={[d.tasks.planned, d.tasks.inProgress, d.tasks.done]} />
+        </div>
+        <div className="animate-scale-in stagger-3">
+          <StatCard icon={Clock} label="Horas registradas" value={hoursLogged}
+            sub={`${d.timeTracking?.entriesLast30Days ?? 0} lançamentos`}
+            color="bg-purple-500 text-white" gradient="bg-gradient-to-br from-purple-50 via-white to-purple-50/30" />
+        </div>
+        <div className="animate-scale-in stagger-4">
+          <StatCard icon={AlertTriangle} label="Projetos em atenção" value={(d.projects.attention ?? 0) + (d.projects.late ?? 0)}
+            sub={`${d.projects.onTrack ?? 0} no prazo`}
+            color="bg-amber-500 text-white" gradient="bg-gradient-to-br from-amber-50 via-white to-amber-50/30"
+            sparkValues={[d.projects.onTrack, d.projects.attention, d.projects.late]} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200/60 p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <span className="w-1 h-5 bg-[#0c4a3e] rounded-full" />
-            Projetos recentes
-          </h2>
+        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200/60 p-5 shadow-sm card-hover animate-fade-in">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <span className="w-1 h-5 bg-[#0c4a3e] rounded-full" />
+              Projetos recentes
+            </h2>
+            <Link href="/painel/kanban" className="text-xs text-[#0c4a3e] hover:underline flex items-center gap-1">
+              Ver todos <ArrowUpRight size={12} />
+            </Link>
+          </div>
           {d.recentProjects.length === 0 ? (
             <p className="text-sm text-gray-400">Nenhum projeto encontrado.</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-1">
               {d.recentProjects.map((p) => (
-                <Link key={p.id} href={`/painel/projeto?id=${p.id}`} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0 hover:bg-gray-50 rounded -mx-2 px-2 transition-colors">
+                <Link key={p.id} href={`/painel/projeto?id=${p.id}`}
+                  className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0 hover:bg-gray-50/80 rounded-lg -mx-2 px-3 transition-all group">
+                  <AvatarInitials name={p.name} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 truncate">{p.name}</div>
+                    <div className="text-sm font-medium text-gray-900 truncate group-hover:text-[#0c4a3e] transition-colors">{p.name}</div>
                     <div className="flex items-center gap-2 mt-1">
                       <HealthBadge health={p.health} />
-                      <span className="text-xs text-gray-400">{p.status}</span>
                     </div>
                   </div>
-                  <div className="w-24 shrink-0">
-                    <div className="text-xs text-right text-gray-500 mb-1">{p.progress}%</div>
-                    <ProgressBar value={p.progress} />
+                  <div className="w-28 shrink-0">
+                    <div className="text-xs text-right text-gray-500 mb-1 font-medium">{p.progress}%</div>
+                    <GradientProgressBar value={p.progress} />
                   </div>
                 </Link>
               ))}
@@ -191,7 +275,7 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200/60 p-5 shadow-sm">
+        <div className="bg-white rounded-xl border border-gray-200/60 p-5 shadow-sm card-hover animate-fade-in">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <span className="w-1 h-5 bg-emerald-500 rounded-full" />
             Saúde dos projetos
@@ -200,15 +284,48 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Activity Feed */}
+      {d.recentActivity && d.recentActivity.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200/60 p-5 shadow-sm card-hover animate-fade-in">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="w-1 h-5 bg-violet-500 rounded-full" />
+            <Activity size={18} className="text-violet-500" />
+            Atividade recente
+          </h2>
+          <div className="space-y-0.5">
+            {d.recentActivity.map((a) => {
+              const name = emailToName(a.actorEmail);
+              const verb = a.action.split(".").pop() ?? "";
+              const dotColor = ACTION_COLORS[verb] ?? "bg-gray-400";
+              return (
+                <div key={a.id} className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 rounded-lg -mx-1 px-2 transition-colors">
+                  <AvatarInitials name={name} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-gray-700">
+                      <span className="font-medium text-gray-900">{name}</span>{" "}
+                      {ACTION_LABELS[a.action] ?? a.action}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                    <span className="text-xs text-gray-400">{formatTimeAgo(a.occurredAt)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200/60 p-5 shadow-sm">
+        <div className="bg-white rounded-xl border border-gray-200/60 p-5 shadow-sm card-hover animate-fade-in">
           <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <span className="w-1 h-4 bg-blue-500 rounded-full" />
             Tarefas
           </h3>
           <TasksPieChart data={{ planned: d.tasks.planned, inProgress: d.tasks.inProgress, blocked: d.tasks.blocked, done: d.tasks.done }} />
         </div>
-        <div className="bg-white rounded-xl border border-gray-200/60 p-5 shadow-sm">
+        <div className="bg-white rounded-xl border border-gray-200/60 p-5 shadow-sm card-hover animate-fade-in">
           <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <span className="w-1 h-4 bg-purple-500 rounded-full" />
             Progresso dos projetos
@@ -218,7 +335,7 @@ export default function DashboardPage() {
       </div>
 
       {d.projectsByArea.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200/60 p-5 shadow-sm">
+        <div className="bg-white rounded-xl border border-gray-200/60 p-5 shadow-sm card-hover animate-fade-in">
           <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <span className="w-1 h-4 bg-amber-500 rounded-full" />
             Projetos por área

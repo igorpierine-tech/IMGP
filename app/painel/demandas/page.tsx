@@ -21,18 +21,37 @@ type Demand = {
 };
 
 const stageBadge: Record<string, string> = {
-  "Triagem": "bg-gray-100 text-gray-600",
-  "Em Análise": "bg-blue-100 text-blue-700",
-  "Aprovada": "bg-emerald-100 text-emerald-700",
-  "Rejeitada": "bg-red-100 text-red-700",
-  "Concluída": "bg-purple-100 text-purple-700",
+  "Triagem": "bg-gray-100 text-gray-600 ring-1 ring-gray-200",
+  "Em Análise": "bg-blue-100 text-blue-700 ring-1 ring-blue-200",
+  "Aprovada": "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200",
+  "Rejeitada": "bg-red-100 text-red-700 ring-1 ring-red-200",
+  "Concluída": "bg-purple-100 text-purple-700 ring-1 ring-purple-200",
+};
+
+const stageDot: Record<string, string> = {
+  "Triagem": "bg-gray-400",
+  "Em Análise": "bg-blue-500",
+  "Aprovada": "bg-emerald-500",
+  "Rejeitada": "bg-red-500",
+  "Concluída": "bg-purple-500",
 };
 
 const impactBadge: Record<string, string> = {
-  "Baixo": "bg-gray-100 text-gray-600",
-  "Médio": "bg-amber-100 text-amber-700",
-  "Alto": "bg-red-100 text-red-700",
+  "Baixo": "bg-gray-100 text-gray-600 ring-1 ring-gray-200",
+  "Médio": "bg-amber-100 text-amber-700 ring-1 ring-amber-200",
+  "Alto": "bg-red-100 text-red-700 ring-1 ring-red-200",
 };
+
+function DemandAvatar({ name }: { name: string }) {
+  const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  const colors = ["bg-blue-500", "bg-emerald-500", "bg-purple-500", "bg-amber-500", "bg-rose-500", "bg-cyan-500"];
+  const idx = name.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length;
+  return (
+    <div className={`w-6 h-6 rounded-full ${colors[idx]} text-white flex items-center justify-center text-[10px] font-semibold shrink-0`} title={name}>
+      {initials}
+    </div>
+  );
+}
 
 export default function DemandasPage() {
   const { toast } = useToast();
@@ -126,20 +145,28 @@ export default function DemandasPage() {
               </thead>
               <tbody>
                 {paginated.map((d) => (
-                  <tr key={d.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
-                    <td className="p-3 font-medium text-gray-900 max-w-[250px] truncate">{d.name}</td>
+                  <tr key={d.id} className="border-b last:border-0 hover:bg-gray-50/80 transition-all group">
+                    <td className="p-3 font-medium text-gray-900 max-w-[250px] truncate group-hover:text-[#0c4a3e] transition-colors">{d.name}</td>
                     <td className="p-3 text-gray-600">{d.area}</td>
                     <td className="p-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${stageBadge[d.stage] ?? "bg-gray-100 text-gray-600"}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${stageBadge[d.stage] ?? "bg-gray-100 text-gray-600"}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${stageDot[d.stage] ?? "bg-gray-400"}`} />
                         {d.stage ?? "Triagem"}
                       </span>
                     </td>
                     <td className="p-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${impactBadge[d.impact] ?? "bg-gray-100 text-gray-600"}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${impactBadge[d.impact] ?? "bg-gray-100 text-gray-600"}`}>
                         {d.impact}
                       </span>
                     </td>
-                    <td className="p-3 text-gray-600">{d.requesterName ?? "—"}</td>
+                    <td className="p-3">
+                      {d.requesterName ? (
+                        <div className="flex items-center gap-2">
+                          <DemandAvatar name={d.requesterName} />
+                          <span className="text-gray-600">{d.requesterName}</span>
+                        </div>
+                      ) : <span className="text-gray-400">—</span>}
+                    </td>
                     <td className="p-3 text-gray-400 text-xs">{new Date(d.createdAt).toLocaleDateString("pt-BR")}</td>
                   </tr>
                 ))}

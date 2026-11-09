@@ -27,11 +27,22 @@ const HEALTH_LABELS: Record<string, string> = {
   late: "Atrasado",
 };
 const STATUS_COLORS: Record<string, string> = {
-  "A fazer": "bg-gray-100 text-gray-600",
-  "Em andamento": "bg-blue-100 text-blue-700",
-  "Concluído": "bg-emerald-100 text-emerald-700",
-  "Cancelado": "bg-red-100 text-red-600",
+  "A fazer": "bg-gray-100 text-gray-600 ring-1 ring-gray-200",
+  "Em andamento": "bg-blue-100 text-blue-700 ring-1 ring-blue-200",
+  "Concluído": "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200",
+  "Cancelado": "bg-red-100 text-red-600 ring-1 ring-red-200",
 };
+
+function EpicAvatar({ name }: { name: string }) {
+  const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  const colors = ["bg-blue-500", "bg-emerald-500", "bg-purple-500", "bg-amber-500", "bg-rose-500", "bg-cyan-500"];
+  const idx = name.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length;
+  return (
+    <div className={`w-6 h-6 rounded-full ${colors[idx]} text-white flex items-center justify-center text-[10px] font-semibold shrink-0`} title={name}>
+      {initials}
+    </div>
+  );
+}
 
 export default function EpicosPage() {
   const { toast } = useToast();
@@ -156,21 +167,21 @@ export default function EpicosPage() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200/60 shadow-sm p-4">
+        <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50/30 rounded-xl border border-gray-200/60 shadow-sm p-4 card-hover animate-scale-in stagger-1">
           <div className="text-sm text-gray-500">Total de Épicos</div>
           <div className="text-2xl font-bold text-gray-900">{epics.length}</div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200/60 shadow-sm p-4">
+        <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50/30 rounded-xl border border-gray-200/60 shadow-sm p-4 card-hover animate-scale-in stagger-2">
           <div className="text-sm text-gray-500">Em andamento</div>
           <div className="text-2xl font-bold text-blue-600">{epics.filter(e => e.status === "Em andamento").length}</div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200/60 shadow-sm p-4">
+        <div className="bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30 rounded-xl border border-gray-200/60 shadow-sm p-4 card-hover animate-scale-in stagger-3">
           <div className="text-sm text-gray-500">Concluídos</div>
           <div className="text-2xl font-bold text-emerald-600">{epics.filter(e => e.status === "Concluído").length}</div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200/60 shadow-sm p-4">
+        <div className="bg-gradient-to-br from-purple-50 via-white to-purple-50/30 rounded-xl border border-gray-200/60 shadow-sm p-4 card-hover animate-scale-in stagger-4">
           <div className="text-sm text-gray-500">Tarefas vinculadas</div>
-          <div className="text-2xl font-bold text-gray-900">{epics.reduce((s, e) => s + e.childCount, 0)}</div>
+          <div className="text-2xl font-bold text-purple-600">{epics.reduce((s, e) => s + e.childCount, 0)}</div>
         </div>
       </div>
 
@@ -257,18 +268,28 @@ function EpicsTable({ epics, onEdit, onDelete, formatDate }: {
             const hc = HEALTH_COLORS[epic.health] ?? "bg-gray-100 text-gray-600";
             const hl = HEALTH_LABELS[epic.health] ?? epic.health;
             return (
-              <tr key={epic.id} className="hover:bg-gray-50 transition-colors">
+              <tr key={epic.id} className="hover:bg-gray-50/80 transition-all group">
                 <td className="px-4 py-3">
-                  <div className="font-medium text-gray-900">{epic.name}</div>
+                  <div className="font-medium text-gray-900 group-hover:text-[#0c4a3e] transition-colors">{epic.name}</div>
                   {epic.groupName && <div className="text-xs text-gray-400 mt-0.5">{epic.groupName}</div>}
                 </td>
                 <td className="px-4 py-3 text-center hidden md:table-cell">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${sc}`}>{epic.status}</span>
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${sc}`}>{epic.status}</span>
                 </td>
                 <td className="px-4 py-3 text-center hidden md:table-cell">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${hc}`}>{hl}</span>
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${hc}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${hc.includes("emerald") ? "bg-emerald-500" : hc.includes("amber") ? "bg-amber-500" : hc.includes("red") ? "bg-red-500" : "bg-gray-400"}`} />
+                    {hl}
+                  </span>
                 </td>
-                <td className="px-4 py-3 text-gray-600 hidden lg:table-cell">{epic.assignedName || "—"}</td>
+                <td className="px-4 py-3 hidden lg:table-cell">
+                  {epic.assignedName ? (
+                    <div className="flex items-center gap-2">
+                      <EpicAvatar name={epic.assignedName} />
+                      <span className="text-gray-600 text-sm">{epic.assignedName}</span>
+                    </div>
+                  ) : <span className="text-gray-400">—</span>}
+                </td>
                 <td className="px-4 py-3 text-center text-gray-500 text-xs hidden lg:table-cell">{formatDate(epic.plannedStart)}</td>
                 <td className="px-4 py-3 text-center text-gray-500 text-xs hidden lg:table-cell">{formatDate(epic.plannedEnd)}</td>
                 <td className="px-4 py-3 text-center">
@@ -277,9 +298,9 @@ function EpicsTable({ epics, onEdit, onDelete, formatDate }: {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => onEdit(epic)} className="text-gray-400 hover:text-[#0c4a3e]"><Pencil size={15} /></button>
-                    <button onClick={() => onDelete(epic)} className="text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => onEdit(epic)} className="p-1 rounded-md text-gray-400 hover:text-[#0c4a3e] hover:bg-emerald-50 transition-colors"><Pencil size={15} /></button>
+                    <button onClick={() => onDelete(epic)} className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"><Trash2 size={15} /></button>
                   </div>
                 </td>
               </tr>

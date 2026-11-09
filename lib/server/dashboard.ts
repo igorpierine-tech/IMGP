@@ -1,5 +1,5 @@
-import { sql, count, eq, and, gte, lte, isNull, ne } from "drizzle-orm";
-import { projects, projectItems, demands, timeEntries } from "../../db/schema";
+import { sql, count, eq, and, gte, lte, isNull, ne, desc } from "drizzle-orm";
+import { projects, projectItems, demands, timeEntries, auditEvents } from "../../db/schema";
 import type { ApiContext } from "./api-context";
 
 export async function getDashboardKpis(ctx: ApiContext) {
@@ -71,6 +71,18 @@ export async function getDashboardKpis(ctx: ApiContext) {
     .orderBy(sql`${projects.updatedAt} DESC`)
     .limit(5);
 
+  const recentActivity = await db
+    .select({
+      id: auditEvents.id,
+      action: auditEvents.action,
+      entityType: auditEvents.entityType,
+      actorEmail: auditEvents.actorEmail,
+      occurredAt: auditEvents.occurredAt,
+    })
+    .from(auditEvents)
+    .orderBy(desc(auditEvents.occurredAt))
+    .limit(8);
+
   return {
     projects: projectStats,
     tasks: taskStats,
@@ -81,5 +93,6 @@ export async function getDashboardKpis(ctx: ApiContext) {
     },
     projectsByArea,
     recentProjects,
+    recentActivity,
   };
 }

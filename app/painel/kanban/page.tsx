@@ -22,11 +22,27 @@ const COLUMNS = [
 ];
 
 const COLUMN_COLORS: Record<string, string> = {
-  planned: "border-t-blue-400",
-  in_progress: "border-t-amber-400",
-  blocked: "border-t-red-400",
-  review: "border-t-purple-400",
-  done: "border-t-emerald-400",
+  planned: "border-t-blue-500",
+  in_progress: "border-t-amber-500",
+  blocked: "border-t-red-500",
+  review: "border-t-purple-500",
+  done: "border-t-emerald-500",
+};
+
+const COLUMN_BG: Record<string, string> = {
+  planned: "bg-blue-50/40",
+  in_progress: "bg-amber-50/40",
+  blocked: "bg-red-50/30",
+  review: "bg-purple-50/40",
+  done: "bg-emerald-50/40",
+};
+
+const COLUMN_BADGE: Record<string, string> = {
+  planned: "bg-blue-100 text-blue-700",
+  in_progress: "bg-amber-100 text-amber-700",
+  blocked: "bg-red-100 text-red-700",
+  review: "bg-purple-100 text-purple-700",
+  done: "bg-emerald-100 text-emerald-700",
 };
 
 const HEALTH_DOT: Record<string, string> = {
@@ -34,6 +50,17 @@ const HEALTH_DOT: Record<string, string> = {
   attention: "bg-amber-500",
   late: "bg-red-500",
 };
+
+function KanbanAvatar({ name }: { name: string }) {
+  const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  const colors = ["bg-blue-500", "bg-emerald-500", "bg-purple-500", "bg-amber-500", "bg-rose-500", "bg-cyan-500"];
+  const idx = name.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length;
+  return (
+    <div className={`w-5 h-5 rounded-full ${colors[idx]} text-white flex items-center justify-center text-[9px] font-semibold shrink-0`} title={name}>
+      {initials}
+    </div>
+  );
+}
 
 const STATUS_MAP: Record<string, string> = {
   planned: "planned", in_progress: "in_progress", blocked: "blocked", review: "review", done: "done",
@@ -168,35 +195,41 @@ export default function KanbanPage() {
                 onDragOver={(e) => handleDragOver(e, col.key)}
                 onDragLeave={handleDragLeave}
                 onDrop={() => handleDrop(col.key)}
-                className={`bg-gray-50 rounded-xl min-w-[280px] w-[280px] flex flex-col border-t-4 transition-colors
+                className={`rounded-xl min-w-[280px] w-[280px] flex flex-col border-t-4 transition-all
                   ${COLUMN_COLORS[col.key] ?? "border-t-gray-300"}
-                  ${dragOverCol === col.key ? "bg-blue-50 ring-2 ring-blue-200" : ""}
+                  ${COLUMN_BG[col.key] ?? "bg-gray-50"}
+                  ${dragOverCol === col.key ? "ring-2 ring-blue-300 scale-[1.01]" : ""}
                 `}>
                 <div className="px-4 py-3 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-gray-700">{col.label}</h3>
-                  <span className="text-xs bg-white text-gray-500 px-2 py-0.5 rounded-full border">{items.length}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${COLUMN_BADGE[col.key] ?? "bg-gray-100 text-gray-600"}`}>{items.length}</span>
                 </div>
                 <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-2">
                   {items.map((item) => (
                     <div key={item.id}
                       draggable
                       onDragStart={() => handleDragStart(item.id, col.key)}
-                      className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing group animate-fade-in">
+                      className="bg-white rounded-lg p-3 border border-gray-200/80 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-grab active:cursor-grabbing group animate-fade-in">
                       <div className="flex items-start gap-2">
-                        <GripVertical size={14} className="text-gray-300 mt-0.5 opacity-0 group-hover:opacity-100 shrink-0" />
+                        <GripVertical size={14} className="text-gray-300 mt-0.5 opacity-0 group-hover:opacity-100 shrink-0 transition-opacity" />
                         <div className="min-w-0 flex-1">
                           <div className="text-sm font-medium text-gray-900 truncate">{item.name}</div>
                           <div className="flex items-center gap-2 mt-2">
                             <div className={`w-2 h-2 rounded-full ${HEALTH_DOT[item.health] ?? "bg-gray-400"}`} />
-                            {item.assignedName && <span className="text-xs text-gray-500 truncate">{item.assignedName}</span>}
+                            {item.assignedName && (
+                              <div className="flex items-center gap-1.5">
+                                <KanbanAvatar name={item.assignedName} />
+                                <span className="text-xs text-gray-500 truncate">{item.assignedName}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
                     </div>
                   ))}
                   {items.length === 0 && (
-                    <div className={`text-center text-xs py-8 rounded-lg border-2 border-dashed transition-colors
-                      ${dragOverCol === col.key ? "border-blue-300 text-blue-400 bg-blue-50/50" : "border-transparent text-gray-400"}`}>
+                    <div className={`text-center text-xs py-8 rounded-lg border-2 border-dashed transition-all
+                      ${dragOverCol === col.key ? "border-blue-300 text-blue-400 bg-blue-50/50 scale-[1.02]" : "border-gray-200 text-gray-400"}`}>
                       {dragOverCol === col.key ? "Soltar aqui" : "Nenhum item"}
                     </div>
                   )}
