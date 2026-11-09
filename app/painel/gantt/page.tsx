@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef } from "react";
 import { appPath } from "@/lib/app-path";
-import { Loader2, GanttChart, CalendarDays } from "lucide-react";
+import { Loader2, GanttChart, CalendarDays, Layers } from "lucide-react";
 import Breadcrumbs from "../components/breadcrumbs";
 import { useToast } from "../components/toast";
 
@@ -165,24 +165,36 @@ export default function GanttPage() {
   const [topH, botH] = useMemo(() => buildHeaders(scale, tStart, tDays, ppd), [scale, tStart, tDays, ppd]);
   const tlW = tDays * ppd;
   const todayPx = daysBetween(tStart, new Date()) * ppd;
-  const displayItems = useMemo(() => {
-    const withDates = items.filter(i => parseDate(i.plannedStart) || parseDate(i.actualStart) || parseDate(i.plannedEnd) || parseDate(i.actualEnd));
-    const epicMap = new Map<number, GanttItem>();
-    for (const it of items) if (it.kind === "epic") epicMap.set(it.id, it);
+  type GanttRow = { type: "epic" | "task" | "orphan-header"; item: GanttItem; taskCount?: number };
+  const ganttRows = useMemo(() => {
     function epicNum(name: string): number { const m = name.match(/^(\d+)/); return m ? parseInt(m[1], 10) : Infinity; }
     function itemDate(it: GanttItem): string { return it.plannedEnd ?? it.plannedStart ?? it.actualEnd ?? it.actualStart ?? "￿"; }
-    function parentEpicNum(it: GanttItem): number {
-      if (it.kind === "epic") return epicNum(it.name);
-      const ep = it.parentId ? epicMap.get(it.parentId) : null;
-      return ep ? epicNum(ep.name) : Infinity;
+    const epics = items.filter(i => i.kind === "epic").sort((a, b) => epicNum(a.name) - epicNum(b.name));
+    const epicIds = new Set(epics.map(e => e.id));
+    const tasksByEpic = new Map<number, GanttItem[]>();
+    const orphanTasks: GanttItem[] = [];
+    for (const it of items) {
+      if (it.kind === "epic") continue;
+      if (it.parentId && epicIds.has(it.parentId)) {
+        const arr = tasksByEpic.get(it.parentId) ?? [];
+        arr.push(it);
+        tasksByEpic.set(it.parentId, arr);
+      } else {
+        orphanTasks.push(it);
+      }
     }
-    return withDates.sort((a, b) => {
-      const ea = parentEpicNum(a), eb = parentEpicNum(b);
-      if (ea !== eb) return ea - eb;
-      if (a.kind === "epic" && b.kind !== "epic") return -1;
-      if (a.kind !== "epic" && b.kind === "epic") return 1;
-      return itemDate(a).localeCompare(itemDate(b));
-    });
+    for (const [, arr] of tasksByEpic) arr.sort((a, b) => itemDate(a).localeCompare(itemDate(b)));
+    orphanTasks.sort((a, b) => itemDate(a).localeCompare(itemDate(b)));
+    const rows: GanttRow[] = [];
+    for (const ep of epics) {
+      const children = tasksByEpic.get(ep.id) ?? [];
+      rows.push({ type: "epic", item: ep, taskCount: children.length });
+      for (const t of children) rows.push({ type: "task", item: t });
+    }
+    if (orphanTasks.length > 0) {
+      for (const t of orphanTasks) rows.push({ type: "task", item: t });
+    }
+    return rows;
   }, [items]);
   const displaySprints = useMemo(() => sprints.filter(s => parseDate(s.startDate) && parseDate(s.endDate)), [sprints]);
 
@@ -263,10 +275,16 @@ export default function GanttPage() {
               {displaySprints.map(s => (
                 <div key={`sl${s.id}`} className="border-b border-gray-50 bg-purple-50/30 px-3 flex items-center text-xs font-medium text-purple-600 truncate" style={{ height: ROW_H }}>{s.name}</div>
               ))}
-              {displayItems.map(it => (
-                <div key={`tl${it.id}`} className="border-b border-gray-50 px-3 flex items-center gap-1.5 hover:bg-gray-50/50" style={{ height: ROW_H }}>
-                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: HEALTH_COLORS[it.health] ?? "#94a3b8" }} />
-                  <span className="text-xs text-gray-700 truncate">{it.name}</span>
+              {ganttRows.map(row => row.type === "epic" ? (
+                <div key={`tl${row.item.id}`} className="border-b border-gray-100 bg-emerald-50/60 px-3 flex items-center gap-1.5" style={{ height: ROW_H }}>
+                  <Layers size={12} className="text-[#0c4a3e] shrink-0" />
+                  <span className="text-xs font-semibold text-[#0c4a3e] truncate">{row.item.name}</span>
+                  <span className="text-[10px] text-gray-400 shrink-0">({row.taskCount})</span>
+                </div>
+              ) : (
+                <div key={`tl${row.item.id}`} className="border-b border-gray-50 pl-7 pr-3 flex items-center gap-1.5 hover:bg-gray-50/50" style={{ height: ROW_H }}>
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: HEALTH_COLORS[row.item.health] ?? "#94a3b8" }} />
+                  <span className="text-xs text-gray-700 truncate">{row.item.name}</span>
                 </div>
               ))}
             </div>
@@ -316,8 +334,13 @@ export default function GanttPage() {
                 })}
 
                 {/* Task bars */}
-                {displayItems.map(it => {
-                  const sDate = (parseDate(it.plannedStart) ?? parseDate(it.actualStart) ?? parseDate(it.plannedEnd) ?? parseDate(it.actualEnd))!;
+                {ganttRows.map(row => {
+                  const it = row.item;
+                  if (row.type === "epic") {
+                    return <div key={`tb${it.id}`} className="relative border-b border-gray-100 bg-emerald-50/30" style={{ height: ROW_H }} />;
+                  }
+                  const sDate = (parseDate(it.plannedStart) ?? parseDate(it.actualStart) ?? parseDate(it.plannedEnd) ?? parseDate(it.actualEnd));
+                  if (!sDate) return <div key={`tb${it.id}`} className="relative border-b border-gray-50" style={{ height: ROW_H }} />;
                   const eDate = parseDate(it.plannedEnd) ?? parseDate(it.actualEnd);
                   const left = daysBetween(tStart, sDate) * ppd;
                   const width = eDate ? Math.max(4, daysBetween(sDate, eDate) * ppd) : ppd * 2;
