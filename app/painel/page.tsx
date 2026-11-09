@@ -19,16 +19,19 @@ type DashboardData = {
   recentProjects: Array<{ id: number; name: string; status: string; health: string; progress: number }>;
 };
 
-function StatCard({ icon: Icon, label, value, sub, color }: { icon: any; label: string; value: string | number; sub?: string; color: string }) {
+function StatCard({ icon: Icon, label, value, sub, color, gradient }: { icon: any; label: string; value: string | number; sub?: string; color: string; gradient: string }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-start gap-3">
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
+    <div className={`relative overflow-hidden rounded-xl border border-gray-200/60 p-5 flex items-start gap-4 ${gradient}`}>
+      <div className="absolute top-0 right-0 w-24 h-24 opacity-[0.07] -mr-6 -mt-6">
+        <Icon size={96} />
+      </div>
+      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${color} shadow-sm`}>
         <Icon size={20} />
       </div>
-      <div>
-        <div className="text-2xl font-bold text-gray-900">{value}</div>
-        <div className="text-sm text-gray-600">{label}</div>
-        {sub && <div className="text-xs text-gray-400 mt-0.5">{sub}</div>}
+      <div className="relative">
+        <div className="text-3xl font-extrabold text-gray-900">{value}</div>
+        <div className="text-sm font-medium text-gray-600 mt-0.5">{label}</div>
+        {sub && <div className="text-xs text-gray-400 mt-1">{sub}</div>}
       </div>
     </div>
   );
@@ -133,18 +136,18 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-center justify-between flex-wrap gap-3 bg-gradient-to-r from-[#0c4a3e] to-[#0e6b56] rounded-xl p-5 -mx-1 shadow-md">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-1">Visão geral de todos os projetos e indicadores</p>
+          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+          <p className="text-sm text-emerald-200/70 mt-1">Visão geral de todos os projetos e indicadores</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setShowNovoProjeto(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-[#0c4a3e] hover:bg-[#0a3d33] rounded-lg transition-colors">
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-[#0c4a3e] bg-white hover:bg-emerald-50 rounded-lg transition-colors shadow-sm">
             <Plus size={16} /> Novo Projeto
           </button>
           <button onClick={() => setShowNovaDemanda(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-[#0c4a3e] bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors">
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-white/15 border border-white/20 hover:bg-white/25 rounded-lg transition-colors backdrop-blur-sm">
             <Plus size={16} /> Nova Demanda
           </button>
         </div>
@@ -153,15 +156,18 @@ export default function DashboardPage() {
       <NovaDemandaForm open={showNovaDemanda} onClose={() => setShowNovaDemanda(false)} onCreated={() => { toast("Demanda criada com sucesso"); window.location.reload(); }} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={FolderOpen} label="Projetos ativos" value={d.projects.inProgress} sub={`${d.projects.total} no total`} color="bg-blue-50 text-blue-600" />
-        <StatCard icon={CheckCircle2} label="Tarefas concluídas" value={d.tasks.done} sub={`de ${d.tasks.total}`} color="bg-emerald-50 text-emerald-600" />
-        <StatCard icon={Clock} label="Horas registradas" value={hoursLogged} sub={`${d.timeTracking?.entriesLast30Days ?? 0} lançamentos`} color="bg-purple-50 text-purple-600" />
-        <StatCard icon={AlertTriangle} label="Projetos em atenção" value={(d.projects.attention ?? 0) + (d.projects.late ?? 0)} sub={`${d.projects.onTrack ?? 0} no prazo`} color="bg-amber-50 text-amber-600" />
+        <StatCard icon={FolderOpen} label="Projetos ativos" value={d.projects.inProgress} sub={`${d.projects.total} no total`} color="bg-blue-500 text-white" gradient="bg-gradient-to-br from-blue-50 via-white to-blue-50/30" />
+        <StatCard icon={CheckCircle2} label="Tarefas concluídas" value={d.tasks.done} sub={`de ${d.tasks.total}`} color="bg-emerald-500 text-white" gradient="bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30" />
+        <StatCard icon={Clock} label="Horas registradas" value={hoursLogged} sub={`${d.timeTracking?.entriesLast30Days ?? 0} lançamentos`} color="bg-purple-500 text-white" gradient="bg-gradient-to-br from-purple-50 via-white to-purple-50/30" />
+        <StatCard icon={AlertTriangle} label="Projetos em atenção" value={(d.projects.attention ?? 0) + (d.projects.late ?? 0)} sub={`${d.projects.onTrack ?? 0} no prazo`} color="bg-amber-500 text-white" gradient="bg-gradient-to-br from-amber-50 via-white to-amber-50/30" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Projetos recentes</h2>
+        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200/60 p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="w-1 h-5 bg-[#0c4a3e] rounded-full" />
+            Projetos recentes
+          </h2>
           {d.recentProjects.length === 0 ? (
             <p className="text-sm text-gray-400">Nenhum projeto encontrado.</p>
           ) : (
@@ -185,26 +191,38 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Saúde dos projetos</h2>
+        <div className="bg-white rounded-xl border border-gray-200/60 p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="w-1 h-5 bg-emerald-500 rounded-full" />
+            Saúde dos projetos
+          </h2>
           <HealthPieChart data={{ onTrack: d.projects.onTrack ?? 0, attention: d.projects.attention ?? 0, late: d.projects.late ?? 0 }} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-medium text-gray-500 mb-4">Tarefas</h3>
+        <div className="bg-white rounded-xl border border-gray-200/60 p-5 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <span className="w-1 h-4 bg-blue-500 rounded-full" />
+            Tarefas
+          </h3>
           <TasksPieChart data={{ planned: d.tasks.planned, inProgress: d.tasks.inProgress, blocked: d.tasks.blocked, done: d.tasks.done }} />
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-medium text-gray-500 mb-4">Progresso dos projetos</h3>
+        <div className="bg-white rounded-xl border border-gray-200/60 p-5 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <span className="w-1 h-4 bg-purple-500 rounded-full" />
+            Progresso dos projetos
+          </h3>
           <ProgressAreaChart projects={d.recentProjects} />
         </div>
       </div>
 
       {d.projectsByArea.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-medium text-gray-500 mb-4">Projetos por área</h3>
+        <div className="bg-white rounded-xl border border-gray-200/60 p-5 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <span className="w-1 h-4 bg-amber-500 rounded-full" />
+            Projetos por área
+          </h3>
           <AreaBarChart data={d.projectsByArea} />
         </div>
       )}

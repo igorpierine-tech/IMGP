@@ -88,26 +88,26 @@ export default function AppShell({ user, children }: { user: User; children: Rea
       )}
 
       <aside className={`
-        fixed inset-y-0 left-0 z-50 flex flex-col bg-white border-r border-gray-200 transition-all duration-200
+        fixed inset-y-0 left-0 z-50 flex flex-col bg-gradient-to-b from-[#0c4a3e] to-[#083028] transition-all duration-200
         ${collapsed ? "w-16" : "w-60"}
         ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0 lg:static
       `}>
-        <div className={`flex items-center gap-2 px-4 h-14 border-b border-gray-100 ${collapsed ? "justify-center" : ""}`}>
+        <div className={`flex items-center gap-2 px-4 h-14 border-b border-white/10 ${collapsed ? "justify-center" : ""}`}>
           {!collapsed && (
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-[#0c4a3e] text-white flex items-center justify-center text-xs font-bold shrink-0">RR</div>
+              <div className="w-8 h-8 rounded-lg bg-white/20 text-white flex items-center justify-center text-xs font-bold shrink-0 backdrop-blur-sm">RR</div>
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-gray-900 truncate">Raízes e Riquezas</div>
-                <div className="text-[10px] text-gray-500 truncate">Gestão de Projetos</div>
+                <div className="text-sm font-semibold text-white truncate">Raízes e Riquezas</div>
+                <div className="text-[10px] text-emerald-300/70 truncate">Gestão de Projetos</div>
               </div>
             </div>
           )}
-          {collapsed && <div className="w-8 h-8 rounded-lg bg-[#0c4a3e] text-white flex items-center justify-center text-xs font-bold">RR</div>}
-          <button onClick={() => setCollapsed(!collapsed)} className="ml-auto text-gray-400 hover:text-gray-600 hidden lg:block">
+          {collapsed && <div className="w-8 h-8 rounded-lg bg-white/20 text-white flex items-center justify-center text-xs font-bold backdrop-blur-sm">RR</div>}
+          <button onClick={() => setCollapsed(!collapsed)} className="ml-auto text-emerald-300/60 hover:text-white hidden lg:block">
             <ChevronLeft size={16} className={`transition-transform ${collapsed ? "rotate-180" : ""}`} />
           </button>
-          <button onClick={() => setMobileOpen(false)} className="ml-auto text-gray-400 lg:hidden">
+          <button onClick={() => setMobileOpen(false)} className="ml-auto text-emerald-300/60 hover:text-white lg:hidden">
             <X size={18} />
           </button>
         </div>
@@ -116,11 +116,11 @@ export default function AppShell({ user, children }: { user: User; children: Rea
           {NAV_GROUPS.map((group) => (
             <div key={group.label} className="mb-1">
               {!collapsed && (
-                <div className="px-3 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                <div className="px-3 pt-3 pb-1 text-[10px] font-bold text-emerald-300/50 uppercase tracking-wider">
                   {group.label}
                 </div>
               )}
-              {collapsed && group.label !== "Gestão" && <div className="mx-2 my-2 border-t border-gray-100" />}
+              {collapsed && group.label !== "Gestão" && <div className="mx-2 my-2 border-t border-white/10" />}
               {group.items.map((item) => {
                 const active = isActive(item.href);
                 const Icon = item.icon;
@@ -130,7 +130,7 @@ export default function AppShell({ user, children }: { user: User; children: Rea
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mb-0.5
-                      ${active ? "bg-[#0c4a3e] text-white" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"}
+                      ${active ? "bg-white/15 text-white font-medium shadow-sm" : "text-emerald-100/70 hover:bg-white/10 hover:text-white"}
                       ${collapsed ? "justify-center" : ""}
                     `}
                     title={collapsed ? item.label : undefined}
@@ -144,25 +144,25 @@ export default function AppShell({ user, children }: { user: User; children: Rea
           ))}
         </nav>
 
-        <div className={`border-t border-gray-100 p-3 ${collapsed ? "text-center" : ""}`}>
+        <div className={`border-t border-white/10 p-3 ${collapsed ? "text-center" : ""}`}>
           {!collapsed ? (
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-[#0c4a3e] text-white flex items-center justify-center text-xs font-medium shrink-0">
+              <div className="w-8 h-8 rounded-full bg-emerald-400/20 text-emerald-200 flex items-center justify-center text-xs font-medium shrink-0 ring-1 ring-emerald-400/30">
                 {user.displayName.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
-                <div className="text-sm font-medium text-gray-900 truncate">{user.displayName}</div>
-                <div className="text-[11px] text-gray-500 truncate">{roleNames[user.role] ?? user.role}</div>
+                <div className="text-sm font-medium text-white truncate">{user.displayName}</div>
+                <div className="text-[11px] text-emerald-300/60 truncate">{roleNames[user.role] ?? user.role}</div>
               </div>
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-full bg-[#0c4a3e] text-white flex items-center justify-center text-xs font-medium mx-auto" title={user.displayName}>
+            <div className="w-8 h-8 rounded-full bg-emerald-400/20 text-emerald-200 flex items-center justify-center text-xs font-medium mx-auto ring-1 ring-emerald-400/30" title={user.displayName}>
               {user.displayName.charAt(0).toUpperCase()}
             </div>
           )}
           <a
             href={appPath("/legacy")}
-            className={`flex items-center gap-2 mt-2 text-xs text-gray-400 hover:text-gray-600 transition-colors ${collapsed ? "justify-center" : ""}`}
+            className={`flex items-center gap-2 mt-2 text-xs text-emerald-300/40 hover:text-emerald-200 transition-colors ${collapsed ? "justify-center" : ""}`}
           >
             <ArrowLeft size={12} />
             {!collapsed && <span>Modo legado</span>}
@@ -171,7 +171,7 @@ export default function AppShell({ user, children }: { user: User; children: Rea
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 border-b border-gray-200 bg-white flex items-center px-4 gap-3 shrink-0">
+        <header className="h-14 border-b border-gray-200 bg-white flex items-center px-4 gap-3 shrink-0 shadow-sm">
           <button onClick={() => setMobileOpen(true)} className="text-gray-500 lg:hidden">
             <Menu size={20} />
           </button>
@@ -181,7 +181,7 @@ export default function AppShell({ user, children }: { user: User; children: Rea
           <NotificationDropdown />
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6 transition-page">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 transition-page bg-gradient-to-br from-gray-50 via-gray-50 to-emerald-50/30">
           {children}
         </main>
       </div>
