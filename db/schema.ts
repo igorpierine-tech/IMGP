@@ -383,6 +383,103 @@ export const attachments = sqliteTable("attachments", {
   index("attachments_user_idx").on(table.uploadedBy),
 ]);
 
+export const projectTemplates = sqliteTable("project_templates", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  description: text("description"),
+  projectTypeId: integer("project_type_id").references(() => projectTypes.id, { onDelete: "set null" }),
+  phasesJson: text("phases_json"),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdBy: text("created_by").references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  index("project_templates_active_idx").on(table.active),
+]);
+
+export const templateItems = sqliteTable("template_items", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  templateId: integer("template_id").notNull().references(() => projectTemplates.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull().default("task"),
+  name: text("name").notNull(),
+  description: text("description"),
+  relativeStartDays: integer("relative_start_days").notNull().default(0),
+  durationDays: integer("duration_days").notNull().default(1),
+  assignedRole: text("assigned_role"),
+  parentRef: text("parent_ref"),
+  itemRef: text("item_ref"),
+  predecessorRefsJson: text("predecessor_refs_json"),
+  sequence: integer("sequence").notNull().default(0),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  index("template_items_template_idx").on(table.templateId, table.sequence),
+]);
+
+export const automationRules = sqliteTable("automation_rules", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  description: text("description"),
+  triggerEvent: text("trigger_event").notNull(),
+  triggerConditionsJson: text("trigger_conditions_json"),
+  actionType: text("action_type").notNull(),
+  actionConfigJson: text("action_config_json").notNull(),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  executionCount: integer("execution_count").notNull().default(0),
+  lastExecutedAt: integer("last_executed_at", { mode: "timestamp_ms" }),
+  createdBy: text("created_by").references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  index("automation_rules_trigger_idx").on(table.triggerEvent, table.active),
+]);
+
+export const tags = sqliteTable("tags", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull().unique(),
+  color: text("color").notNull().default("#6b7280"),
+  description: text("description"),
+  createdBy: text("created_by").references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+});
+
+export const entityTags = sqliteTable("entity_tags", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  tagId: integer("tag_id").notNull().references(() => tags.id, { onDelete: "cascade" }),
+  entityType: text("entity_type").notNull(),
+  entityId: integer("entity_id").notNull(),
+  createdBy: text("created_by").references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  uniqueIndex("entity_tags_unique_idx").on(table.tagId, table.entityType, table.entityId),
+  index("entity_tags_entity_idx").on(table.entityType, table.entityId),
+]);
+
+export const apiKeys = sqliteTable("api_keys", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  keyHash: text("key_hash").notNull().unique(),
+  keyPrefix: text("key_prefix").notNull(),
+  scopesJson: text("scopes_json").notNull().default('["read"]'),
+  expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
+  lastUsedAt: integer("last_used_at", { mode: "timestamp_ms" }),
+  revoked: integer("revoked", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  index("api_keys_user_idx").on(table.userId, table.revoked),
+]);
+
+export const favorites = sqliteTable("favorites", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  entityType: text("entity_type").notNull(),
+  entityId: integer("entity_id").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
+}, (table) => [
+  uniqueIndex("favorites_unique_idx").on(table.userId, table.entityType, table.entityId),
+  index("favorites_user_idx").on(table.userId),
+]);
+
 export const auditEvents = sqliteTable("audit_events", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   occurredAt: integer("occurred_at", { mode: "timestamp_ms" }).notNull().default(now),
