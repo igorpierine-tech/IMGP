@@ -45,3 +45,41 @@ export async function POST(request: Request) {
     return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const ctx = await getApiContext(request);
+    checkPermissionOrRole(ctx, "time_tracking:update", ["project_coordinator", "it_director", "project_analyst", "keyuser"]);
+    const body = await request.json() as Record<string, unknown>;
+    const id = Number(body.id);
+    if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, "ID inválido.");
+    const before = await ctx.db.select().from(timeEntries).where(eq(timeEntries.id, id)).limit(1);
+    if (!before[0]) throw new HttpError(404, "Apontamento não encontrado.");
+    if (before[0].userId !== ctx.user.id) throw new HttpError(403, "Você só pode editar seus próprios apontamentos.");
+    const updates: Record<string, unknown> = {};
+    if (typeof body.activity === "string") updates.activity = body.activity.trim();
+    if (typeof body.totalMinutes === "number") updates.totalMinutes = body.totalMinutes;
+    const [updated] = await ctx.db.update(timeEntries).set(updates).where(eq(timeEntries.id, id)).returning();
+    await writeAudit({ actor: ctx.user, action: "time.updated", entityType: "time_entry", entityId: id, requestId: request.headers.get("cf-ray"), before: before[0], after: updated, db: ctx.db });
+    return Response.json({ entry: updated });
+  } catch (error) {
+    return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const ctx = await getApiContext(request);
+    checkPermissionOrRole(ctx, "time_tracking:delete", ["project_coordinator", "it_director"]);
+    const body = await request.json() as Record<string, unknown>;
+    const id = Number(body.id);
+    if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, "ID inválido.");
+    const before = await ctx.db.select().from(timeEntries).where(eq(timeEntries.id, id)).limit(1);
+    if (!before[0]) throw new HttpError(404, "Apontamento não encontrado.");
+    await ctx.db.delete(timeEntries).where(eq(timeEntries.id, id));
+    await writeAudit({ actor: ctx.user, action: "time.deleted", entityType: "time_entry", entityId: id, requestId: request.headers.get("cf-ray"), before: before[0], db: ctx.db });
+    return Response.json({ ok: true });
+  } catch (error) {
+    return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
+  }
+}

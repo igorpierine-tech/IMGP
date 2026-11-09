@@ -65,5 +65,23 @@ export async function PATCH(request: Request) {
   }
 }
 
+export async function DELETE(request: Request) {
+  try {
+    assertSameOrigin(request);
+    const ctx = await getApiContext(request);
+    checkPermissionOrRole(ctx, "phases:delete", editors);
+    const body = await request.json() as Record<string, unknown>;
+    const id = Number(body.id);
+    if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, "Fase não informada.");
+    const before = await ctx.db.select().from(projectPhases).where(eq(projectPhases.id, id)).limit(1);
+    if (!before[0]) throw new HttpError(404, "Fase não encontrada.");
+    await ctx.db.delete(projectPhases).where(eq(projectPhases.id, id));
+    await writeAudit({ actor: ctx.user, action: "phase.deleted", entityType: "project_phase", entityId: id, requestId: request.headers.get("cf-ray"), before: before[0], db: ctx.db });
+    return Response.json({ ok: true });
+  } catch (error) {
+    return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
+  }
+}
+
 function clean(value: unknown, max: number) { return typeof value === "string" ? value.trim().slice(0, max) : ""; }
 function assertSameOrigin(request: Request) { const origin = request.headers.get("origin"); if (origin && origin !== new URL(request.url).origin) throw new HttpError(403, "Origem da requisição não autorizada."); }

@@ -129,6 +129,28 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PATCH(request: Request) {
+  try {
+    const ctx = await getApiContext(request);
+    checkPermissionOrRole(ctx, "projects:update", ["project_coordinator", "it_director"]);
+    const body = await request.json() as Record<string, unknown>;
+    const id = Number(body.id);
+    if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, "ID inválido.");
+    const before = await ctx.db.select().from(customFieldDefinitions).where(eq(customFieldDefinitions.id, id)).limit(1);
+    if (!before[0]) throw new HttpError(404, "Campo não encontrado.");
+    const label = typeof body.label === "string" ? body.label.trim() : "";
+    if (!label) throw new HttpError(400, "Label é obrigatório.");
+    const fieldType = typeof body.fieldType === "string" ? body.fieldType.trim() : before[0].fieldType;
+    const required = typeof body.required === "boolean" ? body.required : before[0].required;
+    const sequence = typeof body.sequence === "number" ? body.sequence : before[0].sequence;
+    const [updated] = await ctx.db.update(customFieldDefinitions).set({ label, fieldType, required, sequence, updatedAt: new Date() }).where(eq(customFieldDefinitions.id, id)).returning();
+    await writeAudit({ actor: ctx.user, action: "custom_field.updated", entityType: "custom_field", entityId: id, requestId: request.headers.get("cf-ray"), before: before[0], after: updated });
+    return Response.json({ definition: updated });
+  } catch (error) {
+    return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     const ctx = await getApiContext(request);

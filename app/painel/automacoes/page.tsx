@@ -2,7 +2,7 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import { appPath } from "@/lib/app-path";
-import { Loader2, Plus, Zap, ToggleLeft, ToggleRight } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Zap, ToggleLeft, ToggleRight } from "lucide-react";
 import Breadcrumbs from "../components/breadcrumbs";
 import FormDialog, { FormField, FormActions, inputClass, selectClass } from "../components/form-dialog";
 import { useToast } from "../components/toast";
@@ -48,24 +48,46 @@ export default function AutomacoesPage() {
   }
   useEffect(load, []);
 
-  function openNew() { setName(""); setDescription(""); setTriggerEvent(validTriggers[0] ?? ""); setActionType(validActions[0] ?? ""); setFormOpen(true); }
+  const [editing, setEditing] = useState<Rule | null>(null);
+
+  function openNew() { setEditing(null); setName(""); setDescription(""); setTriggerEvent(validTriggers[0] ?? ""); setActionType(validActions[0] ?? ""); setFormOpen(true); }
+
+  function openEdit(rule: Rule) {
+    setEditing(rule); setName(rule.name); setDescription(rule.description ?? "");
+    setTriggerEvent(rule.triggerEvent); setActionType(rule.actionType); setFormOpen(true);
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!name.trim() || !triggerEvent || !actionType) return;
     setSaving(true);
     try {
+      const payload = editing
+        ? { id: editing.id, name: name.trim(), description: description.trim() || null, triggerEvent, actionType }
+        : { name: name.trim(), description: description.trim() || null, triggerEvent, actionType, actionConfig: {} };
       const r = await fetch(appPath("/api/automations"), {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), description: description.trim() || null, triggerEvent, actionType, actionConfig: {} }),
+        method: editing ? "PATCH" : "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
       });
       const b = await r.json() as any;
       if (!r.ok) throw new Error(b.error ?? "Erro");
-      toast("Regra de automação criada");
+      toast(editing ? "Regra atualizada" : "Regra de automação criada");
       setFormOpen(false); load();
     } catch (err: any) { setError(err.message); }
     finally { setSaving(false); }
+  }
+
+  async function handleDelete(rule: Rule) {
+    if (!confirm(`Excluir regra "${rule.name}"?`)) return;
+    try {
+      const r = await fetch(appPath("/api/automations"), {
+        method: "DELETE", credentials: "include",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: rule.id }),
+      });
+      if (!r.ok) { const b = await r.json() as any; throw new Error(b.error ?? "Erro"); }
+      toast("Regra excluída");
+      load();
+    } catch (err: any) { setError(err.message); }
   }
 
   async function toggleActive(rule: Rule) {
@@ -106,6 +128,7 @@ export default function AutomacoesPage() {
             <th className="text-left px-4 py-3 font-medium text-gray-500 hidden md:table-cell">Ação</th>
             <th className="text-center px-4 py-3 font-medium text-gray-500 w-24">Execuções</th>
             <th className="text-center px-4 py-3 font-medium text-gray-500 w-20">Status</th>
+            <th className="w-20"></th>
           </tr></thead>
           <tbody className="divide-y">
             {items.map((item) => (
@@ -126,14 +149,20 @@ export default function AutomacoesPage() {
                     {item.active ? <ToggleRight size={22} className="text-emerald-500" /> : <ToggleLeft size={22} className="text-gray-300" />}
                   </button>
                 </td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => openEdit(item)} className="text-gray-400 hover:text-[#0c4a3e]"><Pencil size={15} /></button>
+                    <button onClick={() => handleDelete(item)} className="text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
+                  </div>
+                </td>
               </tr>
             ))}
-            {items.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Nenhuma regra de automação cadastrada</td></tr>}
+            {items.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Nenhuma regra de automação cadastrada</td></tr>}
           </tbody>
         </table>
       </div>
 
-      <FormDialog open={formOpen} onClose={() => setFormOpen(false)} title="Nova Regra de Automação">
+      <FormDialog open={formOpen} onClose={() => setFormOpen(false)} title={editing ? "Editar Regra" : "Nova Regra de Automação"}>
         <form onSubmit={handleSubmit}>
           <FormField label="Nome" required><input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} required /></FormField>
           <FormField label="Descrição"><input value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} /></FormField>
@@ -149,7 +178,7 @@ export default function AutomacoesPage() {
               </select>
             </FormField>
           </div>
-          <FormActions onCancel={() => setFormOpen(false)} loading={saving} label="Criar" />
+          <FormActions onCancel={() => setFormOpen(false)} loading={saving} label={editing ? "Salvar" : "Criar"} />
         </form>
       </FormDialog>
     </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
-import { Loader2, Target, Plus, ChevronDown, ChevronRight } from "lucide-react";
+import { Loader2, Target, Plus, Pencil, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import NovoObjetivoForm, { NovoKeyResultForm } from "../components/novo-objetivo-form";
 import Breadcrumbs from "../components/breadcrumbs";
 import { SkeletonTable } from "../components/skeleton";
@@ -18,6 +18,7 @@ export default function OkrsPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [showNovoObj, setShowNovoObj] = useState(false);
+  const [editingObj, setEditingObj] = useState<Objective | null>(null);
   const [krTarget, setKrTarget] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -46,6 +47,32 @@ export default function OkrsPage() {
     setExpanded((prev) => ({ ...prev, [id]: { krs: body.keyResults ?? [], loaded: true } }));
   }
 
+  function openEditObj(obj: Objective) { setEditingObj(obj); setShowNovoObj(true); }
+
+  async function handleDeleteObj(obj: Objective) {
+    if (!confirm(`Excluir objetivo "${obj.title}" e todos os seus Key Results?`)) return;
+    try {
+      const r = await fetch(appPath("/api/okrs"), {
+        method: "DELETE", credentials: "include",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: obj.id }),
+      });
+      if (!r.ok) { const b = await r.json() as { error?: string }; throw new Error(b.error ?? "Erro"); }
+      setRefreshKey((k) => k + 1);
+    } catch (err) { setError(err instanceof Error ? err.message : "Erro"); }
+  }
+
+  async function handleDeleteKr(kr: KeyResult) {
+    if (!confirm(`Excluir Key Result "${kr.title}"?`)) return;
+    try {
+      const r = await fetch(appPath("/api/okrs"), {
+        method: "DELETE", credentials: "include",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete_key_result", id: kr.id }),
+      });
+      if (!r.ok) { const b = await r.json() as { error?: string }; throw new Error(b.error ?? "Erro"); }
+      setRefreshKey((k) => k + 1); setExpanded({});
+    } catch (err) { setError(err instanceof Error ? err.message : "Erro"); }
+  }
+
   const { toast } = useToast();
 
   if (loading) return <SkeletonTable rows={4} cols={3} />;
@@ -70,7 +97,7 @@ export default function OkrsPage() {
           <Plus size={16} /> Novo Objetivo
         </button>
       </div>
-      <NovoObjetivoForm open={showNovoObj} onClose={() => setShowNovoObj(false)} onCreated={() => { setRefreshKey((k) => k + 1); toast("Objetivo criado com sucesso"); }} />
+      <NovoObjetivoForm open={showNovoObj} onClose={() => { setShowNovoObj(false); setEditingObj(null); }} editing={editingObj} onCreated={() => { setRefreshKey((k) => k + 1); toast(editingObj ? "Objetivo atualizado" : "Objetivo criado com sucesso"); setEditingObj(null); }} />
       {krTarget !== null && (
         <NovoKeyResultForm open objectiveId={krTarget} onClose={() => setKrTarget(null)} onCreated={() => { setRefreshKey((k) => k + 1); setExpanded({}); }} />
       )}
@@ -91,6 +118,10 @@ export default function OkrsPage() {
                   {obj.period && <span className="text-xs text-gray-400">{obj.period}</span>}
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => openEditObj(obj)} className="text-gray-400 hover:text-[#0c4a3e] p-1"><Pencil size={14} /></button>
+                    <button onClick={() => handleDeleteObj(obj)} className="text-gray-400 hover:text-red-500 p-1"><Trash2 size={14} /></button>
+                  </div>
                   <span className="text-sm font-bold text-gray-900">{obj.progress}%</span>
                   <div className="w-24 bg-gray-100 rounded-full h-2">
                     <div className={`h-2 rounded-full transition-all ${obj.progress >= 70 ? "bg-emerald-500" : obj.progress >= 40 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${Math.min(100, obj.progress)}%` }} />
@@ -120,6 +151,7 @@ export default function OkrsPage() {
                               <div className="bg-[#0c4a3e] h-1.5 rounded-full" style={{ width: `${pct}%` }} />
                             </div>
                             <span className="text-xs font-medium text-gray-600 w-10 text-right">{pct}%</span>
+                            <button onClick={() => handleDeleteKr(kr)} className="text-gray-300 hover:text-red-500 shrink-0"><Trash2 size={13} /></button>
                           </div>
                         );
                       })}

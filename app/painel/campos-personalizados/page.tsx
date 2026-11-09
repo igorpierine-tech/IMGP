@@ -2,7 +2,7 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import { appPath } from "@/lib/app-path";
-import { Loader2, Plus, Pencil, TextCursorInput } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, TextCursorInput } from "lucide-react";
 import Breadcrumbs from "../components/breadcrumbs";
 import FormDialog, { FormField, FormActions, inputClass, selectClass } from "../components/form-dialog";
 import { useToast } from "../components/toast";
@@ -47,24 +47,48 @@ export default function CamposPersonalizadosPage() {
   }
   useEffect(load, []);
 
-  function openNew() { setEntityType("project"); setFieldKey(""); setLabel(""); setFieldType("text"); setRequired(false); setSequence("0"); setFormOpen(true); }
+  const [editing, setEditing] = useState<FieldDef | null>(null);
+
+  function openNew() { setEditing(null); setEntityType("project"); setFieldKey(""); setLabel(""); setFieldType("text"); setRequired(false); setSequence("0"); setFormOpen(true); }
+
+  function openEdit(item: FieldDef) {
+    setEditing(item); setEntityType(item.entityType); setFieldKey(item.fieldKey);
+    setLabel(item.label); setFieldType(item.fieldType); setRequired(item.required);
+    setSequence(String(item.sequence)); setFormOpen(true);
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!label.trim() || !fieldKey.trim()) return;
     setSaving(true);
     try {
+      const payload = editing
+        ? { id: editing.id, label: label.trim(), fieldType, required, sequence: parseInt(sequence) || 0 }
+        : { action: "create_definition", entityType, fieldKey: fieldKey.trim(), label: label.trim(), fieldType, required, sequence: parseInt(sequence) || 0 };
       const r = await fetch(appPath("/api/custom-fields"), {
-        method: "POST", credentials: "include",
+        method: editing ? "PATCH" : "POST", credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "create_definition", entityType, fieldKey: fieldKey.trim(), label: label.trim(), fieldType, required, sequence: parseInt(sequence) || 0 }),
+        body: JSON.stringify(payload),
       });
       const b = await r.json() as any;
       if (!r.ok) throw new Error(b.error ?? "Erro");
-      toast("Campo personalizado criado");
+      toast(editing ? "Campo atualizado" : "Campo personalizado criado");
       setFormOpen(false); load();
     } catch (err: any) { setError(err.message); }
     finally { setSaving(false); }
+  }
+
+  async function handleDelete(item: FieldDef) {
+    if (!confirm(`Desativar campo "${item.label}"?`)) return;
+    try {
+      const r = await fetch(appPath("/api/custom-fields"), {
+        method: "DELETE", credentials: "include",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: item.id }),
+      });
+      if (!r.ok) { const b = await r.json() as any; throw new Error(b.error ?? "Erro"); }
+      toast("Campo desativado");
+      load();
+    } catch (err: any) { setError(err.message); }
   }
 
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando...</div>;
@@ -98,6 +122,7 @@ export default function CamposPersonalizadosPage() {
               <th className="text-center px-4 py-2 font-medium text-gray-400 text-xs">Tipo</th>
               <th className="text-center px-4 py-2 font-medium text-gray-400 text-xs">Obrigatório</th>
               <th className="text-center px-4 py-2 font-medium text-gray-400 text-xs">Status</th>
+              <th className="w-16"></th>
             </tr></thead>
             <tbody className="divide-y">
               {fields.map((item) => (
@@ -111,6 +136,12 @@ export default function CamposPersonalizadosPage() {
                       {item.active ? "Ativo" : "Inativo"}
                     </span>
                   </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => openEdit(item)} className="text-gray-400 hover:text-[#0c4a3e]"><Pencil size={15} /></button>
+                      <button onClick={() => handleDelete(item)} className="text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -118,15 +149,17 @@ export default function CamposPersonalizadosPage() {
         </div>
       ))}
 
-      <FormDialog open={formOpen} onClose={() => setFormOpen(false)} title="Novo Campo Personalizado">
+      <FormDialog open={formOpen} onClose={() => setFormOpen(false)} title={editing ? "Editar Campo" : "Novo Campo Personalizado"}>
         <form onSubmit={handleSubmit}>
-          <FormField label="Entidade" required>
-            <select value={entityType} onChange={(e) => setEntityType(e.target.value)} className={selectClass}>
-              {ENTITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
-          </FormField>
+          {!editing && (
+            <FormField label="Entidade" required>
+              <select value={entityType} onChange={(e) => setEntityType(e.target.value)} className={selectClass}>
+                {ENTITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </FormField>
+          )}
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="Chave (field_key)" required><input value={fieldKey} onChange={(e) => setFieldKey(e.target.value)} className={inputClass} placeholder="ex: custom_priority" required /></FormField>
+            <FormField label="Chave (field_key)" required><input value={fieldKey} onChange={(e) => setFieldKey(e.target.value)} className={inputClass} placeholder="ex: custom_priority" required disabled={!!editing} /></FormField>
             <FormField label="Label" required><input value={label} onChange={(e) => setLabel(e.target.value)} className={inputClass} placeholder="ex: Prioridade customizada" required /></FormField>
           </div>
           <div className="grid grid-cols-3 gap-3">
@@ -142,7 +175,7 @@ export default function CamposPersonalizadosPage() {
               </label>
             </FormField>
           </div>
-          <FormActions onCancel={() => setFormOpen(false)} loading={saving} label="Criar" />
+          <FormActions onCancel={() => setFormOpen(false)} loading={saving} label={editing ? "Salvar" : "Criar"} />
         </form>
       </FormDialog>
     </div>

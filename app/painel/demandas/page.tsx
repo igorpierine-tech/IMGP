@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import NovaDemandaForm from "../components/nova-demanda-form";
 import Breadcrumbs from "../components/breadcrumbs";
 import { SkeletonTable } from "../components/skeleton";
@@ -16,6 +16,13 @@ type Demand = {
   area: string;
   stage: string;
   impact: string;
+  objective: string;
+  projectTypeId: number;
+  solution?: string | null;
+  benefit?: string | null;
+  risk?: string | null;
+  estimatedCost?: number | null;
+  estimatedHours?: number | null;
   requesterName?: string;
   createdAt: string;
 };
@@ -59,6 +66,7 @@ export default function DemandasPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showNova, setShowNova] = useState(false);
+  const [editingDemand, setEditingDemand] = useState<Demand | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [filterStage, setFilterStage] = useState("");
   const [filterImpact, setFilterImpact] = useState("");
@@ -77,6 +85,21 @@ export default function DemandasPage() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [refreshKey]);
+
+  function openEdit(d: Demand) { setEditingDemand(d); setShowNova(true); }
+
+  async function handleDelete(d: Demand) {
+    if (!confirm(`Excluir demanda "${d.name}"?`)) return;
+    try {
+      const r = await fetch(appPath("/api/demands"), {
+        method: "DELETE", credentials: "include",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: d.id }),
+      });
+      if (!r.ok) { const b = await r.json() as { error?: string }; throw new Error(b.error ?? "Erro"); }
+      toast("Demanda excluída");
+      setRefreshKey((k) => k + 1);
+    } catch (err) { setError(err instanceof Error ? err.message : "Erro"); }
+  }
 
   const impactOrder: Record<string, number> = { "Alto": 3, "Médio": 2, "Baixo": 1 };
 
@@ -106,7 +129,7 @@ export default function DemandasPage() {
         </button>
       </div>
 
-      <NovaDemandaForm open={showNova} onClose={() => setShowNova(false)} onCreated={() => { setRefreshKey((k) => k + 1); toast("Demanda criada com sucesso"); }} />
+      <NovaDemandaForm open={showNova} onClose={() => { setShowNova(false); setEditingDemand(null); }} editing={editingDemand} onCreated={() => { setRefreshKey((k) => k + 1); toast(editingDemand ? "Demanda atualizada" : "Demanda criada com sucesso"); setEditingDemand(null); }} />
 
       <div className="flex flex-wrap gap-3">
         <select value={filterStage} onChange={(e) => setFilterStage(e.target.value)}
@@ -141,6 +164,7 @@ export default function DemandasPage() {
                   <th className="p-3 font-medium">Impacto</th>
                   <th className="p-3 font-medium">Solicitante</th>
                   <th className="p-3 font-medium">Data</th>
+                  <th className="p-3 font-medium w-20"></th>
                 </tr>
               </thead>
               <tbody>
@@ -168,6 +192,12 @@ export default function DemandasPage() {
                       ) : <span className="text-gray-400">—</span>}
                     </td>
                     <td className="p-3 text-gray-400 text-xs">{new Date(d.createdAt).toLocaleDateString("pt-BR")}</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => openEdit(d)} className="text-gray-400 hover:text-[#0c4a3e]"><Pencil size={15} /></button>
+                        <button onClick={() => handleDelete(d)} className="text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -184,9 +214,12 @@ export default function DemandasPage() {
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${stageBadge[d.stage] ?? "bg-gray-100 text-gray-600"}`}>{d.stage ?? "Triagem"}</span>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${impactBadge[d.impact] ?? "bg-gray-100 text-gray-600"}`}>{d.impact}</span>
                 </div>
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>{d.area}</span>
-                  <span>{new Date(d.createdAt).toLocaleDateString("pt-BR")}</span>
+                <div className="flex justify-between items-center text-xs text-gray-500">
+                  <span>{d.area} · {new Date(d.createdAt).toLocaleDateString("pt-BR")}</span>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => openEdit(d)} className="text-gray-400 hover:text-[#0c4a3e] p-1"><Pencil size={14} /></button>
+                    <button onClick={() => handleDelete(d)} className="text-gray-400 hover:text-red-500 p-1"><Trash2 size={14} /></button>
+                  </div>
                 </div>
               </div>
             ))}

@@ -86,6 +86,26 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PATCH(request: Request) {
+  try {
+    const ctx = await getApiContext(request);
+    checkPermissionOrRole(ctx, "projects:update", ["project_coordinator", "it_director"]);
+    const body = await request.json() as Record<string, unknown>;
+    const id = Number(body.id);
+    if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, "ID inválido.");
+    const before = await ctx.db.select().from(projectTemplates).where(eq(projectTemplates.id, id)).limit(1);
+    if (!before[0]) throw new HttpError(404, "Template não encontrado.");
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    if (!name) throw new HttpError(400, "Nome é obrigatório.");
+    const description = typeof body.description === "string" ? body.description.trim() : null;
+    const [updated] = await ctx.db.update(projectTemplates).set({ name, description, updatedAt: new Date() }).where(eq(projectTemplates.id, id)).returning();
+    await writeAudit({ actor: ctx.user, action: "template.updated", entityType: "template", entityId: id, requestId: request.headers.get("cf-ray"), before: before[0], after: updated });
+    return Response.json({ template: updated });
+  } catch (error) {
+    return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     const ctx = await getApiContext(request);

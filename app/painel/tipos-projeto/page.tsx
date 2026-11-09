@@ -2,7 +2,7 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import { appPath } from "@/lib/app-path";
-import { Loader2, Plus, Pencil, Layers } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Layers } from "lucide-react";
 import Breadcrumbs from "../components/breadcrumbs";
 import FormDialog, { FormField, FormActions, inputClass } from "../components/form-dialog";
 import { useToast } from "../components/toast";
@@ -52,6 +52,19 @@ export default function TiposProjetoPage() {
     finally { setSaving(false); }
   }
 
+  async function handleDelete(item: ProjectType) {
+    if (!confirm(`Excluir tipo de projeto "${item.name}"?`)) return;
+    try {
+      const r = await fetch(appPath("/api/project-types"), {
+        method: "DELETE", credentials: "include",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: item.id }),
+      });
+      if (!r.ok) { const b = await r.json() as any; throw new Error(b.error ?? "Erro"); }
+      toast("Tipo de projeto excluído");
+      load();
+    } catch (err: any) { setError(err.message); }
+  }
+
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando...</div>;
 
   return (
@@ -90,7 +103,10 @@ export default function TiposProjetoPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <button onClick={() => openEdit(item)} className="text-gray-400 hover:text-[#0c4a3e]"><Pencil size={15} /></button>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => openEdit(item)} className="text-gray-400 hover:text-[#0c4a3e]"><Pencil size={15} /></button>
+                    <button onClick={() => handleDelete(item)} className="text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
+                  </div>
                 </td>
               </tr>
             ))}

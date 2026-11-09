@@ -2,7 +2,7 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import { appPath } from "@/lib/app-path";
-import { Loader2, Plus, Trash2, Webhook, ExternalLink } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Webhook, ExternalLink } from "lucide-react";
 import Breadcrumbs from "../components/breadcrumbs";
 import FormDialog, { FormField, FormActions, inputClass } from "../components/form-dialog";
 import { useToast } from "../components/toast";
@@ -35,7 +35,14 @@ export default function WebhooksPage() {
   }
   useEffect(load, []);
 
-  function openNew() { setName(""); setUrl(""); setEvents([]); setFormOpen(true); }
+  const [editing, setEditing] = useState<WebhookItem | null>(null);
+
+  function openNew() { setEditing(null); setName(""); setUrl(""); setEvents([]); setFormOpen(true); }
+
+  function openEdit(item: WebhookItem) {
+    setEditing(item); setName(item.name); setUrl(item.url);
+    setEvents(parseEvents(item.eventsJson)); setFormOpen(true);
+  }
 
   function toggleEvent(ev: string) { setEvents(prev => prev.includes(ev) ? prev.filter(e => e !== ev) : [...prev, ev]); }
 
@@ -44,14 +51,16 @@ export default function WebhooksPage() {
     if (!name.trim() || !url.trim()) return;
     setSaving(true);
     try {
+      const payload = editing
+        ? { id: editing.id, name: name.trim(), url: url.trim(), events }
+        : { name: name.trim(), url: url.trim(), events };
       const r = await fetch(appPath("/api/webhooks"), {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), url: url.trim(), events }),
+        method: editing ? "PATCH" : "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
       });
       const b = await r.json() as any;
       if (!r.ok) throw new Error(b.error ?? "Erro");
-      toast("Webhook criado");
+      toast(editing ? "Webhook atualizado" : "Webhook criado");
       setFormOpen(false); load();
     } catch (err: any) { setError(err.message); }
     finally { setSaving(false); }
@@ -121,7 +130,12 @@ export default function WebhooksPage() {
                       {item.active ? "Ativo" : "Inativo"}
                     </span>
                   </td>
-                  <td className="px-4 py-3"><button onClick={() => handleDelete(item)} className="text-gray-400 hover:text-red-500"><Trash2 size={15} /></button></td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => openEdit(item)} className="text-gray-400 hover:text-[#0c4a3e]"><Pencil size={15} /></button>
+                      <button onClick={() => handleDelete(item)} className="text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
+                    </div>
+                  </td>
                 </tr>
               );
             })}
@@ -130,7 +144,7 @@ export default function WebhooksPage() {
         </table>
       </div>
 
-      <FormDialog open={formOpen} onClose={() => setFormOpen(false)} title="Novo Webhook">
+      <FormDialog open={formOpen} onClose={() => setFormOpen(false)} title={editing ? "Editar Webhook" : "Novo Webhook"}>
         <form onSubmit={handleSubmit}>
           <FormField label="Nome" required><input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} required /></FormField>
           <FormField label="URL" required><input type="url" value={url} onChange={(e) => setUrl(e.target.value)} className={inputClass} placeholder="https://..." required /></FormField>
@@ -144,7 +158,7 @@ export default function WebhooksPage() {
               ))}
             </div>
           </FormField>
-          <FormActions onCancel={() => setFormOpen(false)} loading={saving} label="Criar" />
+          <FormActions onCancel={() => setFormOpen(false)} loading={saving} label={editing ? "Salvar" : "Criar"} />
         </form>
       </FormDialog>
     </div>

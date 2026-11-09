@@ -2,7 +2,7 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import { appPath } from "@/lib/app-path";
-import { Loader2, Plus, Pencil, ShieldCheck, ChevronDown, ChevronRight } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, ShieldCheck, ChevronDown, ChevronRight } from "lucide-react";
 import Breadcrumbs from "../components/breadcrumbs";
 import FormDialog, { FormField, FormActions, inputClass } from "../components/form-dialog";
 import { useToast } from "../components/toast";
@@ -32,7 +32,14 @@ export default function PapeisPage() {
   }
   useEffect(load, []);
 
-  function openNew() { setKey(""); setName(""); setDescription(""); setPerms([]); setFormOpen(true); }
+  const [editing, setEditing] = useState<Role | null>(null);
+
+  function openNew() { setEditing(null); setKey(""); setName(""); setDescription(""); setPerms([]); setFormOpen(true); }
+
+  function openEdit(role: Role) {
+    setEditing(role); setKey(role.key); setName(role.name);
+    setDescription(role.description ?? ""); setPerms([...role.permissions]); setFormOpen(true);
+  }
 
   function togglePerm(p: string) { setPerms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]); }
 
@@ -41,17 +48,33 @@ export default function PapeisPage() {
     if (!key.trim() || !name.trim()) return;
     setSaving(true);
     try {
+      const payload = editing
+        ? { id: editing.id, key: key.trim(), name: name.trim(), description: description.trim() || null, permissions: perms }
+        : { key: key.trim(), name: name.trim(), description: description.trim() || null, permissions: perms };
       const r = await fetch(appPath("/api/roles"), {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: key.trim(), name: name.trim(), description: description.trim() || null, permissions: perms }),
+        method: editing ? "PATCH" : "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
       });
       const b = await r.json() as any;
       if (!r.ok) throw new Error(b.error ?? "Erro");
-      toast("Papel criado");
+      toast(editing ? "Papel atualizado" : "Papel criado");
       setFormOpen(false); load();
     } catch (err: any) { setError(err.message); }
     finally { setSaving(false); }
+  }
+
+  async function handleDelete(role: Role) {
+    if (role.builtIn) { setError("Papéis nativos não podem ser excluídos."); return; }
+    if (!confirm(`Excluir papel "${role.name}"?`)) return;
+    try {
+      const r = await fetch(appPath("/api/roles"), {
+        method: "DELETE", credentials: "include",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: role.id }),
+      });
+      if (!r.ok) { const b = await r.json() as any; throw new Error(b.error ?? "Erro"); }
+      toast("Papel excluído");
+      load();
+    } catch (err: any) { setError(err.message); }
   }
 
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando...</div>;
@@ -86,6 +109,12 @@ export default function PapeisPage() {
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-gray-400">{role.permissions.length} permissões</span>
+                {!role.builtIn && (
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => openEdit(role)} className="text-gray-400 hover:text-[#0c4a3e] p-1"><Pencil size={14} /></button>
+                    <button onClick={() => handleDelete(role)} className="text-gray-400 hover:text-red-500 p-1"><Trash2 size={14} /></button>
+                  </div>
+                )}
                 {expanded === role.id ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronRight size={16} className="text-gray-400" />}
               </div>
             </button>
@@ -108,7 +137,7 @@ export default function PapeisPage() {
         {items.length === 0 && <div className="bg-white rounded-xl border border-gray-200/60 shadow-sm p-8 text-center text-gray-400">Nenhum papel cadastrado</div>}
       </div>
 
-      <FormDialog open={formOpen} onClose={() => setFormOpen(false)} title="Novo Papel">
+      <FormDialog open={formOpen} onClose={() => setFormOpen(false)} title={editing ? "Editar Papel" : "Novo Papel"}>
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Chave" required><input value={key} onChange={(e) => setKey(e.target.value)} className={inputClass} placeholder="ex: team_lead" required /></FormField>
@@ -135,7 +164,7 @@ export default function PapeisPage() {
               ))}
             </div>
           </FormField>
-          <FormActions onCancel={() => setFormOpen(false)} loading={saving} label="Criar" />
+          <FormActions onCancel={() => setFormOpen(false)} loading={saving} label={editing ? "Salvar" : "Criar"} />
         </form>
       </FormDialog>
     </div>

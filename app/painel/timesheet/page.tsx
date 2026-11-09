@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
-import { Loader2, Play, Pause, Square, Clock, Timer } from "lucide-react";
+import { Loader2, Play, Pause, Square, Clock, Timer, Pencil, Trash2 } from "lucide-react";
+import FormDialog, { FormField, FormActions, inputClass } from "../components/form-dialog";
 import Breadcrumbs from "../components/breadcrumbs";
 import { useToast } from "../components/toast";
 
@@ -75,6 +76,44 @@ export default function TimesheetPage() {
       if (!r.ok) throw new Error(b.error ?? "Erro");
       toast(action === "pause" ? "Timer pausado" : "Timer finalizado");
       load();
+    } catch (err: any) { setError(err.message); }
+  }
+
+  const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
+  const [editActivity, setEditActivity] = useState("");
+  const [editMinutes, setEditMinutes] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+
+  function openEditEntry(entry: TimeEntry) {
+    setEditingEntry(entry); setEditActivity(entry.activity); setEditMinutes(String(entry.totalMinutes)); setEditOpen(true);
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingEntry) return;
+    setEditSaving(true);
+    try {
+      const r = await fetch(appPath("/api/time-entries"), {
+        method: "PATCH", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editingEntry.id, activity: editActivity.trim(), totalMinutes: parseInt(editMinutes) || 0 }),
+      });
+      if (!r.ok) { const b = await r.json() as any; throw new Error(b.error ?? "Erro"); }
+      toast("Apontamento atualizado"); setEditOpen(false); load();
+    } catch (err: any) { setError(err.message); }
+    finally { setEditSaving(false); }
+  }
+
+  async function handleDeleteEntry(entry: TimeEntry) {
+    if (!confirm(`Excluir apontamento "${entry.activity}"?`)) return;
+    try {
+      const r = await fetch(appPath("/api/time-entries"), {
+        method: "DELETE", credentials: "include",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: entry.id }),
+      });
+      if (!r.ok) { const b = await r.json() as any; throw new Error(b.error ?? "Erro"); }
+      toast("Apontamento excluído"); load();
     } catch (err: any) { setError(err.message); }
   }
 
@@ -158,6 +197,7 @@ export default function TimesheetPage() {
             <th className="text-center px-4 py-2 font-medium text-gray-400 text-xs">Fim</th>
             <th className="text-center px-4 py-2 font-medium text-gray-400 text-xs">Duração</th>
             <th className="text-center px-4 py-2 font-medium text-gray-400 text-xs">Status</th>
+            <th className="w-16"></th>
           </tr></thead>
           <tbody className="divide-y">
             {entries.slice(0, 50).map((entry) => {
@@ -170,13 +210,32 @@ export default function TimesheetPage() {
                   <td className="px-4 py-3 text-center text-gray-500 text-xs">{entry.endedAt ? formatTime(entry.endedAt) : "—"}</td>
                   <td className="px-4 py-3 text-center font-medium text-gray-700">{entry.status === "closed" ? formatDuration(entry.totalMinutes) : "—"}</td>
                   <td className="px-4 py-3 text-center"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${st.color}`}>{st.label}</span></td>
+                  <td className="px-4 py-3">
+                    {entry.status === "closed" && (
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => openEditEntry(entry)} className="text-gray-400 hover:text-[#0c4a3e]"><Pencil size={14} /></button>
+                        <button onClick={() => handleDeleteEntry(entry)} className="text-gray-400 hover:text-red-500"><Trash2 size={14} /></button>
+                      </div>
+                    )}
+                  </td>
                 </tr>
               );
             })}
-            {entries.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Nenhum apontamento registrado</td></tr>}
+            {entries.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Nenhum apontamento registrado</td></tr>}
           </tbody>
         </table>
       </div>
+      <FormDialog open={editOpen} onClose={() => setEditOpen(false)} title="Editar Apontamento">
+        <form onSubmit={handleEditSubmit}>
+          <FormField label="Atividade" required>
+            <input value={editActivity} onChange={(e) => setEditActivity(e.target.value)} className={inputClass} required />
+          </FormField>
+          <FormField label="Duração (minutos)">
+            <input type="number" min={0} value={editMinutes} onChange={(e) => setEditMinutes(e.target.value)} className={inputClass} />
+          </FormField>
+          <FormActions onCancel={() => setEditOpen(false)} loading={editSaving} label="Salvar" />
+        </form>
+      </FormDialog>
     </div>
   );
 }

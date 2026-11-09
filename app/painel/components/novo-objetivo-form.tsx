@@ -1,18 +1,28 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { appPath } from "@/lib/app-path";
 import FormDialog, { FormField, FormActions, inputClass, selectClass } from "./form-dialog";
 
-export default function NovoObjetivoForm({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated?: () => void }) {
+type ObjEdit = { id: number; title: string; description?: string | null; period?: string | null; status?: string };
+
+export default function NovoObjetivoForm({ open, onClose, onCreated, editing }: { open: boolean; onClose: () => void; onCreated?: () => void; editing?: ObjEdit | null }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [period, setPeriod] = useState("");
+  const [status, setStatus] = useState("active");
 
-  function reset() { setTitle(""); setDescription(""); setPeriod(""); setError(""); }
+  useEffect(() => {
+    if (open && editing) {
+      setTitle(editing.title); setDescription(editing.description ?? "");
+      setPeriod(editing.period ?? ""); setStatus(editing.status ?? "active");
+    } else if (open) { reset(); }
+  }, [open, editing]);
+
+  function reset() { setTitle(""); setDescription(""); setPeriod(""); setStatus("active"); setError(""); }
   function handleClose() { reset(); onClose(); }
 
   async function handleSubmit(e: FormEvent) {
@@ -20,19 +30,17 @@ export default function NovoObjetivoForm({ open, onClose, onCreated }: { open: b
     setLoading(true);
     setError("");
     try {
+      const payload: Record<string, unknown> = editing
+        ? { id: editing.id, title, description: description || undefined, period: period || undefined, status }
+        : { action: "create_objective", title, description: description || undefined, period: period || undefined };
       const res = await fetch(appPath("/api/okrs"), {
-        method: "POST",
+        method: editing ? "PATCH" : "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "create_objective",
-          title,
-          description: description || undefined,
-          period: period || undefined,
-        }),
+        body: JSON.stringify(payload),
       });
       const body = await res.json() as { error?: string };
-      if (!res.ok) throw new Error(body.error ?? "Erro ao criar objetivo");
+      if (!res.ok) throw new Error(body.error ?? (editing ? "Erro ao atualizar objetivo" : "Erro ao criar objetivo"));
       reset();
       onCreated?.();
       onClose();
@@ -44,7 +52,7 @@ export default function NovoObjetivoForm({ open, onClose, onCreated }: { open: b
   }
 
   return (
-    <FormDialog open={open} onClose={handleClose} title="Novo Objetivo (OKR)">
+    <FormDialog open={open} onClose={handleClose} title={editing ? "Editar Objetivo" : "Novo Objetivo (OKR)"}>
       <form onSubmit={handleSubmit}>
         {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">{error}</div>}
 
@@ -70,7 +78,17 @@ export default function NovoObjetivoForm({ open, onClose, onCreated }: { open: b
           </select>
         </FormField>
 
-        <FormActions onCancel={handleClose} loading={loading} />
+        {editing && (
+          <FormField label="Status">
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
+              <option value="active">Ativo</option>
+              <option value="completed">Concluído</option>
+              <option value="cancelled">Cancelado</option>
+            </select>
+          </FormField>
+        )}
+
+        <FormActions onCancel={handleClose} loading={loading} label={editing ? "Salvar" : "Criar"} />
       </form>
     </FormDialog>
   );

@@ -112,3 +112,31 @@ export async function PATCH(request: Request) {
     return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const ctx = await getApiContext(request);
+    checkPermissionOrRole(ctx, "projects:delete", ["project_coordinator", "it_director", "project_analyst"]);
+    const body = await request.json() as Record<string, unknown>;
+    const action = String(body.action ?? "delete_objective");
+    if (action === "delete_key_result") {
+      const id = Number(body.id);
+      if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, "ID inválido.");
+      const before = await ctx.db.select().from(keyResults).where(eq(keyResults.id, id)).limit(1);
+      if (!before[0]) throw new HttpError(404, "Key Result não encontrado.");
+      await ctx.db.delete(keyResults).where(eq(keyResults.id, id));
+      await writeAudit({ actor: ctx.user, action: "key_result.deleted", entityType: "key_result", entityId: id, requestId: request.headers.get("cf-ray"), before: before[0], db: ctx.db });
+      return Response.json({ ok: true });
+    }
+    const id = Number(body.id);
+    if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, "ID inválido.");
+    const before = await ctx.db.select().from(objectives).where(eq(objectives.id, id)).limit(1);
+    if (!before[0]) throw new HttpError(404, "Objetivo não encontrado.");
+    await ctx.db.delete(keyResults).where(eq(keyResults.objectiveId, id));
+    await ctx.db.delete(objectives).where(eq(objectives.id, id));
+    await writeAudit({ actor: ctx.user, action: "objective.deleted", entityType: "objective", entityId: id, requestId: request.headers.get("cf-ray"), before: before[0], db: ctx.db });
+    return Response.json({ ok: true });
+  } catch (error) {
+    return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
+  }
+}

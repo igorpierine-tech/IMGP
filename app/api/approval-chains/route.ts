@@ -162,6 +162,27 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PATCH(request: Request) {
+  try {
+    const ctx = await getApiContext(request);
+    checkPermissionOrRole(ctx, "users:update", ["project_coordinator", "it_director"]);
+    const body = await request.json() as Record<string, unknown>;
+    const id = Number(body.id);
+    if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, "ID inválido.");
+    const before = await ctx.db.select().from(approvalChains).where(eq(approvalChains.id, id)).limit(1);
+    if (!before[0]) throw new HttpError(404, "Cadeia não encontrada.");
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    if (!name) throw new HttpError(400, "Nome é obrigatório.");
+    const escalationHours = typeof body.escalationHours === "number" ? body.escalationHours : before[0].escalationHours;
+    const stepsJson = Array.isArray(body.steps) && body.steps.length > 0 ? JSON.stringify(body.steps) : before[0].stepsJson;
+    const [updated] = await ctx.db.update(approvalChains).set({ name, escalationHours, stepsJson, updatedAt: new Date() }).where(eq(approvalChains.id, id)).returning();
+    await writeAudit({ actor: ctx.user, action: "approval_chain.updated", entityType: "approval_chain", entityId: id, requestId: request.headers.get("cf-ray"), before: before[0], after: updated });
+    return Response.json({ chain: updated });
+  } catch (error) {
+    return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     const ctx = await getApiContext(request);

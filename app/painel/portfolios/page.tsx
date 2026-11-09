@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
-import { Loader2, FolderKanban, ChevronRight, Plus } from "lucide-react";
+import { Loader2, FolderKanban, ChevronRight, Plus, Pencil, Trash2 } from "lucide-react";
 import Breadcrumbs from "../components/breadcrumbs";
 import NovoPortfolioForm from "../components/novo-portfolio-form";
+import { useToast } from "../components/toast";
 
 type Portfolio = { id: number; name: string; description?: string };
 type PortfolioDetail = {
@@ -22,7 +23,9 @@ export default function PortfoliosPage() {
   const [detail, setDetail] = useState<PortfolioDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { toast } = useToast();
   const [showNovo, setShowNovo] = useState(false);
+  const [editingPortfolio, setEditingPortfolio] = useState<Portfolio | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -41,6 +44,21 @@ export default function PortfoliosPage() {
     const r = await fetch(appPath(`/api/portfolios?id=${id}`), { credentials: "include" });
     const body = await r.json() as PortfolioDetail;
     setDetail(body);
+  }
+
+  function openEdit(p: Portfolio) { setEditingPortfolio(p); setShowNovo(true); }
+
+  async function handleDelete(p: Portfolio) {
+    if (!confirm(`Excluir portfólio "${p.name}" e todas as suas associações?`)) return;
+    try {
+      const r = await fetch(appPath("/api/portfolios"), {
+        method: "DELETE", credentials: "include",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: p.id }),
+      });
+      if (!r.ok) { const b = await r.json() as { error?: string }; throw new Error(b.error ?? "Erro"); }
+      toast("Portfólio excluído");
+      setRefreshKey((k) => k + 1);
+    } catch (err) { setError(err instanceof Error ? err.message : "Erro"); }
   }
 
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando...</div>;
@@ -101,7 +119,7 @@ export default function PortfoliosPage() {
           <Plus size={16} /> Novo Portfólio
         </button>
       </div>
-      <NovoPortfolioForm open={showNovo} onClose={() => setShowNovo(false)} onCreated={() => setRefreshKey((k) => k + 1)} />
+      <NovoPortfolioForm open={showNovo} onClose={() => { setShowNovo(false); setEditingPortfolio(null); }} editing={editingPortfolio} onCreated={() => { setRefreshKey((k) => k + 1); toast(editingPortfolio ? "Portfólio atualizado" : "Portfólio criado"); setEditingPortfolio(null); }} />
 
       {portfolios.length === 0 ? (
         <div className="bg-white rounded-xl border p-12 text-center">
@@ -113,13 +131,19 @@ export default function PortfoliosPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {portfolios.map((p) => (
-            <button key={p.id} onClick={() => loadDetail(p.id)} className="bg-white rounded-xl border border-gray-200 p-5 text-left hover:shadow-md transition-shadow">
+            <div key={p.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-lg bg-[#0c4a3e]/10 text-[#0c4a3e] flex items-center justify-center"><FolderKanban size={20} /></div>
-                <h3 className="text-sm font-semibold text-gray-900">{p.name}</h3>
+                <button onClick={() => loadDetail(p.id)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                  <div className="w-10 h-10 rounded-lg bg-[#0c4a3e]/10 text-[#0c4a3e] flex items-center justify-center shrink-0"><FolderKanban size={20} /></div>
+                  <h3 className="text-sm font-semibold text-gray-900 truncate">{p.name}</h3>
+                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => openEdit(p)} className="text-gray-400 hover:text-[#0c4a3e] p-1"><Pencil size={14} /></button>
+                  <button onClick={() => handleDelete(p)} className="text-gray-400 hover:text-red-500 p-1"><Trash2 size={14} /></button>
+                </div>
               </div>
               {p.description && <p className="text-xs text-gray-500 line-clamp-2">{p.description}</p>}
-            </button>
+            </div>
           ))}
         </div>
       )}

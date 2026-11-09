@@ -108,3 +108,41 @@ export async function POST(request: Request) {
     return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const ctx = await getApiContext(request);
+    checkPermissionOrRole(ctx, "projects:update", ["project_coordinator", "it_director"]);
+    const body = await request.json() as Record<string, unknown>;
+    const id = Number(body.id);
+    if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, "ID inválido.");
+    const before = await ctx.db.select().from(portfolios).where(eq(portfolios.id, id)).limit(1);
+    if (!before[0]) throw new HttpError(404, "Portfólio não encontrado.");
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    if (!name) throw new HttpError(400, "Nome é obrigatório.");
+    const description = typeof body.description === "string" ? body.description.trim() : before[0].description;
+    const [updated] = await ctx.db.update(portfolios).set({ name, description, updatedAt: new Date() }).where(eq(portfolios.id, id)).returning();
+    await writeAudit({ actor: ctx.user, action: "portfolio.updated", entityType: "portfolio", entityId: id, requestId: request.headers.get("cf-ray"), before: before[0], after: updated });
+    return Response.json({ portfolio: updated });
+  } catch (error) {
+    return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const ctx = await getApiContext(request);
+    checkPermissionOrRole(ctx, "projects:delete", ["project_coordinator", "it_director"]);
+    const body = await request.json() as Record<string, unknown>;
+    const id = Number(body.id);
+    if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, "ID inválido.");
+    const before = await ctx.db.select().from(portfolios).where(eq(portfolios.id, id)).limit(1);
+    if (!before[0]) throw new HttpError(404, "Portfólio não encontrado.");
+    await ctx.db.delete(portfolioProjects).where(eq(portfolioProjects.portfolioId, id));
+    await ctx.db.delete(portfolios).where(eq(portfolios.id, id));
+    await writeAudit({ actor: ctx.user, action: "portfolio.deleted", entityType: "portfolio", entityId: id, requestId: request.headers.get("cf-ray"), before: before[0], db: ctx.db });
+    return Response.json({ ok: true });
+  } catch (error) {
+    return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
+  }
+}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import { appPath } from "@/lib/app-path";
-import { Loader2, Plus, ChevronDown, ChevronRight, GitMerge } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, ChevronDown, ChevronRight, GitMerge } from "lucide-react";
 import Breadcrumbs from "../components/breadcrumbs";
 import FormDialog, { FormField, FormActions, inputClass, selectClass } from "../components/form-dialog";
 import { useToast } from "../components/toast";
@@ -36,7 +36,16 @@ export default function CadeiasAprovacaoPage() {
   }
   useEffect(load, []);
 
-  function openNew() { setName(""); setEntityType("project"); setEscalationHours(""); setSteps([{ approverRole: "" }]); setFormOpen(true); }
+  const [editing, setEditing] = useState<Chain | null>(null);
+
+  function openNew() { setEditing(null); setName(""); setEntityType("project"); setEscalationHours(""); setSteps([{ approverRole: "" }]); setFormOpen(true); }
+
+  function openEdit(chain: Chain) {
+    setEditing(chain); setName(chain.name); setEntityType(chain.entityType);
+    setEscalationHours(chain.escalationHours ? String(chain.escalationHours) : "");
+    setSteps(parseSteps(chain.stepsJson).map(s => ({ approverRole: s.approverRole ?? s.approverUserId ?? "" })));
+    setFormOpen(true);
+  }
 
   function addStep() { setSteps(s => [...s, { approverRole: "" }]); }
   function removeStep(i: number) { setSteps(s => s.filter((_, idx) => idx !== i)); }
@@ -49,17 +58,33 @@ export default function CadeiasAprovacaoPage() {
     if (validSteps.length === 0) { setError("Adicione pelo menos uma etapa com papel aprovador."); return; }
     setSaving(true);
     try {
+      const payload = editing
+        ? { id: editing.id, name: name.trim(), steps: validSteps, escalationHours: parseInt(escalationHours) || null }
+        : { action: "create_chain", name: name.trim(), entityType, steps: validSteps, escalationHours: parseInt(escalationHours) || null };
       const r = await fetch(appPath("/api/approval-chains"), {
-        method: "POST", credentials: "include",
+        method: editing ? "PATCH" : "POST", credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "create_chain", name: name.trim(), entityType, steps: validSteps, escalationHours: parseInt(escalationHours) || null }),
+        body: JSON.stringify(payload),
       });
       const b = await r.json() as any;
       if (!r.ok) throw new Error(b.error ?? "Erro");
-      toast("Cadeia de aprovação criada");
+      toast(editing ? "Cadeia atualizada" : "Cadeia de aprovação criada");
       setFormOpen(false); load();
     } catch (err: any) { setError(err.message); }
     finally { setSaving(false); }
+  }
+
+  async function handleDelete(chain: Chain) {
+    if (!confirm(`Desativar cadeia "${chain.name}"?`)) return;
+    try {
+      const r = await fetch(appPath("/api/approval-chains"), {
+        method: "DELETE", credentials: "include",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: chain.id }),
+      });
+      if (!r.ok) { const b = await r.json() as any; throw new Error(b.error ?? "Erro"); }
+      toast("Cadeia desativada");
+      load();
+    } catch (err: any) { setError(err.message); }
   }
 
   function parseSteps(json: string): Array<{ approverRole?: string; approverUserId?: string }> {
@@ -96,6 +121,10 @@ export default function CadeiasAprovacaoPage() {
                     {chain.escalationHours && <span> &middot; Escalação: {chain.escalationHours}h</span>}
                   </div>
                 </div>
+                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  <button onClick={() => openEdit(chain)} className="text-gray-400 hover:text-[#0c4a3e] p-1"><Pencil size={14} /></button>
+                  <button onClick={() => handleDelete(chain)} className="text-gray-400 hover:text-red-500 p-1"><Trash2 size={14} /></button>
+                </div>
                 {expanded === chain.id ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronRight size={16} className="text-gray-400" />}
               </button>
               {expanded === chain.id && (
@@ -116,7 +145,7 @@ export default function CadeiasAprovacaoPage() {
         {items.length === 0 && <div className="bg-white rounded-xl border border-gray-200/60 shadow-sm p-8 text-center text-gray-400">Nenhuma cadeia de aprovação cadastrada</div>}
       </div>
 
-      <FormDialog open={formOpen} onClose={() => setFormOpen(false)} title="Nova Cadeia de Aprovação">
+      <FormDialog open={formOpen} onClose={() => setFormOpen(false)} title={editing ? "Editar Cadeia" : "Nova Cadeia de Aprovação"}>
         <form onSubmit={handleSubmit}>
           <FormField label="Nome" required><input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} required /></FormField>
           <div className="grid grid-cols-2 gap-3">
@@ -139,7 +168,7 @@ export default function CadeiasAprovacaoPage() {
               <button type="button" onClick={addStep} className="text-xs text-[#0c4a3e] hover:underline">+ Adicionar etapa</button>
             </div>
           </FormField>
-          <FormActions onCancel={() => setFormOpen(false)} loading={saving} label="Criar" />
+          <FormActions onCancel={() => setFormOpen(false)} loading={saving} label={editing ? "Salvar" : "Criar"} />
         </form>
       </FormDialog>
     </div>

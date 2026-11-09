@@ -27,21 +27,30 @@ export default function TemplatesPage() {
   }
   useEffect(load, []);
 
-  function openNew() { setName(""); setDescription(""); setFormOpen(true); }
+  const [editing, setEditing] = useState<Template | null>(null);
+
+  function openNew() { setEditing(null); setName(""); setDescription(""); setFormOpen(true); }
+
+  function openEdit(item: Template) {
+    setEditing(item); setName(item.name); setDescription(item.description ?? ""); setFormOpen(true);
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
     setSaving(true);
     try {
+      const payload = editing
+        ? { id: editing.id, name: name.trim(), description: description.trim() || null }
+        : { name: name.trim(), description: description.trim() || null };
       const r = await fetch(appPath("/api/templates"), {
-        method: "POST", credentials: "include",
+        method: editing ? "PATCH" : "POST", credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), description: description.trim() || null }),
+        body: JSON.stringify(payload),
       });
       const b = await r.json() as any;
       if (!r.ok) throw new Error(b.error ?? "Erro");
-      toast("Template criado");
+      toast(editing ? "Template atualizado" : "Template criado");
       setFormOpen(false); load();
     } catch (err: any) { setError(err.message); }
     finally { setSaving(false); }
@@ -92,7 +101,10 @@ export default function TemplatesPage() {
                 <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{item.description || "—"}</td>
                 <td className="px-4 py-3 text-center text-gray-500">{Array.isArray(item.phasesJson) ? item.phasesJson.length : 0}</td>
                 <td className="px-4 py-3">
-                  <button onClick={() => handleDeactivate(item)} className="text-gray-400 hover:text-red-500" title="Desativar"><Trash2 size={15} /></button>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => openEdit(item)} className="text-gray-400 hover:text-[#0c4a3e]"><Pencil size={15} /></button>
+                    <button onClick={() => handleDeactivate(item)} className="text-gray-400 hover:text-red-500" title="Desativar"><Trash2 size={15} /></button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -101,11 +113,11 @@ export default function TemplatesPage() {
         </table>
       </div>
 
-      <FormDialog open={formOpen} onClose={() => setFormOpen(false)} title="Novo Template">
+      <FormDialog open={formOpen} onClose={() => setFormOpen(false)} title={editing ? "Editar Template" : "Novo Template"}>
         <form onSubmit={handleSubmit}>
           <FormField label="Nome" required><input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} required /></FormField>
           <FormField label="Descrição"><input value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} /></FormField>
-          <FormActions onCancel={() => setFormOpen(false)} loading={saving} label="Criar" />
+          <FormActions onCancel={() => setFormOpen(false)} loading={saving} label={editing ? "Salvar" : "Criar"} />
         </form>
       </FormDialog>
     </div>

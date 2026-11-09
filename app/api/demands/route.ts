@@ -6,7 +6,7 @@ import { errorMessage } from "@/lib/server/errors";
 import { getApiContext, checkPermissionOrRole } from "@/lib/server/api-context";
 
 const demandRoles = ["project_coordinator", "it_director", "project_analyst", "keyuser", "requester", "area_manager"] as const;
-const demandManagers = ["project_coordinator", "it_director", "project_analyst"];
+const demandManagers = ["project_coordinator", "it_director", "project_analyst"] as const;
 const impacts = ["Baixo", "Médio", "Alto"];
 const requirementFields = [
   "company", "directorate", "processOwner", "demandType", "currentProcess", "scope",
@@ -111,7 +111,7 @@ export async function PATCH(request: Request) {
     if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, "Demanda inválida.");
     const before = await ctx.db.select().from(demands).where(eq(demands.id, id)).limit(1);
     if (!before[0]) throw new HttpError(404, "Demanda não encontrada.");
-    if (!demandManagers.includes(ctx.user.role) && before[0].requesterUserId !== ctx.user.id) {
+    if (!(demandManagers as readonly string[]).includes(ctx.user.role) && before[0].requesterUserId !== ctx.user.id) {
       throw new HttpError(403, "Você só pode alterar as demandas que cadastrou.");
     }
     const impact = text(body.impact);
@@ -133,6 +133,23 @@ export async function PATCH(request: Request) {
     }).where(eq(demands.id, id)).returning();
     await writeAudit({ actor: ctx.user, action: "demand.updated", entityType: "demand", entityId: id, requestId: request.headers.get("cf-ray"), before: before[0], after: updated, db: ctx.db });
     return Response.json({ demand: updated });
+  } catch (error) {
+    return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const ctx = await getApiContext(request);
+    checkPermissionOrRole(ctx, "demands:delete", demandManagers);
+    const body = await request.json() as Record<string, unknown>;
+    const id = Number(body.id);
+    if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, "Demanda inválida.");
+    const before = await ctx.db.select().from(demands).where(eq(demands.id, id)).limit(1);
+    if (!before[0]) throw new HttpError(404, "Demanda não encontrada.");
+    await ctx.db.delete(demands).where(eq(demands.id, id));
+    await writeAudit({ actor: ctx.user, action: "demand.deleted", entityType: "demand", entityId: id, requestId: request.headers.get("cf-ray"), before: before[0], db: ctx.db });
+    return Response.json({ ok: true });
   } catch (error) {
     return Response.json({ error: errorMessage(error) }, { status: error instanceof HttpError ? error.status : 500 });
   }
