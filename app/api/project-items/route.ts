@@ -45,7 +45,7 @@ export async function PATCH(request: Request) {
 async function validatedValues(body: Record<string, unknown>, fallbackProjectId: number | undefined, db: any) {
   const projectId = positiveInteger(body.projectId) || fallbackProjectId;
   const name = clean(body.name, 250);
-  const kind: "task" | "milestone" | "subtask" = body.kind === "milestone" || body.kind === "subtask" ? body.kind : "task";
+  const kind: "epic" | "task" | "milestone" | "subtask" = body.kind === "epic" || body.kind === "milestone" || body.kind === "subtask" ? body.kind : "task";
   if (!projectId || !name) throw new HttpError(400, "Projeto e título são obrigatórios.");
   const [project] = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
   if (!project) throw new HttpError(404, "Projeto não encontrado.");

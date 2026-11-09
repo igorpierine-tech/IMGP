@@ -126,7 +126,7 @@ export const projectItems = sqliteTable("project_items", {
   parentId: integer("parent_id"),
   source: text("source").notNull().default("platform"),
   externalId: text("external_id"),
-  kind: text("kind", { enum: ["milestone", "task", "subtask"] }).notNull(),
+  kind: text("kind", { enum: ["epic", "milestone", "task", "subtask"] }).notNull(),
   name: text("name").notNull(),
   groupName: text("group_name"),
   status: text("status").notNull().default("planned"),

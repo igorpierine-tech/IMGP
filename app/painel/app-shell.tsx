@@ -28,6 +28,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/painel/meu-painel", label: "Meu Painel", icon: Star },
       { href: "/painel/kanban", label: "Kanban", icon: KanbanSquare },
       { href: "/painel/calendario", label: "Calendário", icon: CalendarDays },
+      { href: "/painel/epicos", label: "Épicos", icon: Layers },
       { href: "/painel/demandas", label: "Demandas", icon: FileText },
       { href: "/painel/gantt", label: "Gantt", icon: GanttChart },
       { href: "/painel/timesheet", label: "Timesheet", icon: Timer },
