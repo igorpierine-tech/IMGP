@@ -79,6 +79,7 @@ export default function ProjetoDetailPage() {
   const [showEditProject, setShowEditProject] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const table = useSortableTable<TaskItem>(tasks);
 
   useEffect(() => {
     if (!projectId) { setError("Projeto não informado."); setLoading(false); return; }
@@ -125,8 +126,6 @@ export default function ProjetoDetailPage() {
       setRefreshKey((k) => k + 1);
     } catch (err) { toast(err instanceof Error ? err.message : "Erro ao excluir", "error"); }
   }
-
-  const table = useSortableTable<TaskItem>(tasks);
 
   const hs = healthStyles[project.health] ?? { bg: "bg-gray-100 text-gray-600", label: project.health };
   const allItems = tasks;

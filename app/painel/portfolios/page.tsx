@@ -65,67 +65,7 @@ export default function PortfoliosPage() {
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando...</div>;
   if (error) return <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">{error}</div>;
 
-  if (detail) {
-    const { portfolio, projects, summary } = detail;
-    type PortProject = typeof projects[number];
-    const pfColumns: ColumnDef<PortProject>[] = [
-      { key: "projectName", label: "Projeto", sortable: true, getValue: (p) => p.projectName },
-      { key: "projectStatus", label: "Status", sortable: true, filterable: true, filterOptions: [...new Set(projects.map(p => p.projectStatus))].sort(), getValue: (p) => p.projectStatus },
-      { key: "projectHealth", label: "Saúde", sortable: true, getValue: (p) => p.projectHealth },
-      { key: "projectProgress", label: "Progresso", sortable: true, getValue: (p) => p.projectProgress },
-      { key: "plannedCost", label: "Custo plan.", sortable: true, getValue: (p) => p.plannedCost },
-      { key: "actualCost", label: "Custo real", sortable: true, getValue: (p) => p.actualCost },
-    ];
-    const pf = useSortableTable<PortProject>(projects);
-    const sortedProjects = pf.sortAndFilter(projects, pfColumns);
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <button onClick={() => setDetail(null)} className="text-sm text-gray-500 hover:text-gray-700">Portfólios</button>
-          <ChevronRight size={14} className="text-gray-400" />
-          <span className="text-sm font-medium text-gray-900">{portfolio.name}</span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl border p-4"><div className="text-2xl font-bold">{summary.totalProjects}</div><div className="text-sm text-gray-500">Projetos</div></div>
-          <div className="bg-white rounded-xl border p-4"><div className="text-2xl font-bold">{summary.avgProgress}%</div><div className="text-sm text-gray-500">Progresso médio</div></div>
-          <div className="bg-white rounded-xl border p-4"><div className="text-lg font-bold text-gray-900">{formatCurrency(summary.totalPlannedCost)}</div><div className="text-sm text-gray-500">Custo planejado</div></div>
-          <div className="bg-white rounded-xl border p-4"><div className="text-lg font-bold text-gray-900">{formatCurrency(summary.totalActualCost)}</div><div className="text-sm text-gray-500">Custo realizado</div></div>
-        </div>
-
-        <div className="bg-white rounded-xl border">
-          <table className="w-full text-sm">
-            <thead><tr className="border-b text-left">
-              {pfColumns.map((col) => (
-                <SortableHeader key={col.key} label={col.label} sortDir={pf.getSortDir(col.key)} onSort={() => pf.toggleSort(col.key)}
-                  sortable={col.sortable} filterable={col.filterable} filterOptions={col.filterOptions}
-                  filterValue={pf.filters[col.key] ?? ""} onFilter={(v) => pf.setFilter(col.key, v)} />
-              ))}
-            </tr></thead>
-            <tbody>
-              {sortedProjects.map((p) => (
-                <tr key={p.projectId} className="border-b last:border-0 hover:bg-gray-50">
-                  <td className="p-3 font-medium text-gray-900">{p.projectName}</td>
-                  <td className="p-3 text-gray-600">{p.projectStatus}</td>
-                  <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.projectHealth === "on_track" ? "bg-emerald-100 text-emerald-700" : p.projectHealth === "attention" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
-                      {p.projectHealth === "on_track" ? "No prazo" : p.projectHealth === "attention" ? "Atenção" : "Atrasado"}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex items-center gap-2"><div className="w-16 bg-gray-100 rounded-full h-1.5"><div className="bg-[#0c4a3e] h-1.5 rounded-full" style={{ width: `${p.projectProgress}%` }} /></div><span className="text-xs">{p.projectProgress}%</span></div>
-                  </td>
-                  <td className="p-3 text-gray-600">{formatCurrency(p.plannedCost)}</td>
-                  <td className="p-3 text-gray-600">{formatCurrency(p.actualCost)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {projects.length === 0 && <div className="p-8 text-center text-sm text-gray-400">Nenhum projeto neste portfólio.</div>}
-        </div>
-      </div>
-    );
-  }
+  if (detail) return <PortfolioDetailView detail={detail} onBack={() => setDetail(null)} />;
 
   return (
     <div className="space-y-6">
@@ -165,6 +105,67 @@ export default function PortfoliosPage() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+type PortProject = PortfolioDetail["projects"][number];
+
+function PortfolioDetailView({ detail, onBack }: { detail: PortfolioDetail; onBack: () => void }) {
+  const { portfolio, projects, summary } = detail;
+  const pfColumns: ColumnDef<PortProject>[] = [
+    { key: "projectName", label: "Projeto", sortable: true, getValue: (p) => p.projectName },
+    { key: "projectStatus", label: "Status", sortable: true, filterable: true, filterOptions: [...new Set(projects.map(p => p.projectStatus))].sort(), getValue: (p) => p.projectStatus },
+    { key: "projectHealth", label: "Saúde", sortable: true, getValue: (p) => p.projectHealth },
+    { key: "projectProgress", label: "Progresso", sortable: true, getValue: (p) => p.projectProgress },
+    { key: "plannedCost", label: "Custo plan.", sortable: true, getValue: (p) => p.plannedCost },
+    { key: "actualCost", label: "Custo real", sortable: true, getValue: (p) => p.actualCost },
+  ];
+  const pf = useSortableTable<PortProject>(projects);
+  const sortedProjects = pf.sortAndFilter(projects, pfColumns);
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <button onClick={onBack} className="text-sm text-gray-500 hover:text-gray-700">Portfólios</button>
+        <ChevronRight size={14} className="text-gray-400" />
+        <span className="text-sm font-medium text-gray-900">{portfolio.name}</span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl border p-4"><div className="text-2xl font-bold">{summary.totalProjects}</div><div className="text-sm text-gray-500">Projetos</div></div>
+        <div className="bg-white rounded-xl border p-4"><div className="text-2xl font-bold">{summary.avgProgress}%</div><div className="text-sm text-gray-500">Progresso médio</div></div>
+        <div className="bg-white rounded-xl border p-4"><div className="text-lg font-bold text-gray-900">{formatCurrency(summary.totalPlannedCost)}</div><div className="text-sm text-gray-500">Custo planejado</div></div>
+        <div className="bg-white rounded-xl border p-4"><div className="text-lg font-bold text-gray-900">{formatCurrency(summary.totalActualCost)}</div><div className="text-sm text-gray-500">Custo realizado</div></div>
+      </div>
+      <div className="bg-white rounded-xl border">
+        <table className="w-full text-sm">
+          <thead><tr className="border-b text-left">
+            {pfColumns.map((col) => (
+              <SortableHeader key={col.key} label={col.label} sortDir={pf.getSortDir(col.key)} onSort={() => pf.toggleSort(col.key)}
+                sortable={col.sortable} filterable={col.filterable} filterOptions={col.filterOptions}
+                filterValue={pf.filters[col.key] ?? ""} onFilter={(v) => pf.setFilter(col.key, v)} />
+            ))}
+          </tr></thead>
+          <tbody>
+            {sortedProjects.map((p) => (
+              <tr key={p.projectId} className="border-b last:border-0 hover:bg-gray-50">
+                <td className="p-3 font-medium text-gray-900">{p.projectName}</td>
+                <td className="p-3 text-gray-600">{p.projectStatus}</td>
+                <td className="p-3">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.projectHealth === "on_track" ? "bg-emerald-100 text-emerald-700" : p.projectHealth === "attention" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
+                    {p.projectHealth === "on_track" ? "No prazo" : p.projectHealth === "attention" ? "Atenção" : "Atrasado"}
+                  </span>
+                </td>
+                <td className="p-3">
+                  <div className="flex items-center gap-2"><div className="w-16 bg-gray-100 rounded-full h-1.5"><div className="bg-[#0c4a3e] h-1.5 rounded-full" style={{ width: `${p.projectProgress}%` }} /></div><span className="text-xs">{p.projectProgress}%</span></div>
+                </td>
+                <td className="p-3 text-gray-600">{formatCurrency(p.plannedCost)}</td>
+                <td className="p-3 text-gray-600">{formatCurrency(p.actualCost)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {projects.length === 0 && <div className="p-8 text-center text-sm text-gray-400">Nenhum projeto neste portfólio.</div>}
+      </div>
     </div>
   );
 }
