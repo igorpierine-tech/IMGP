@@ -1,0 +1,12 @@
+{
+  "name": "Raízes e Riquezas - Gestão de Projetos",
+  "short_name": "IMGP",
+  "description": "Plataforma integrada para gestão de projetos",
+  "start_url": "/Projetos/painel",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0c4a3e",
+  "icons": [
+    { "src": "/Projetos/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

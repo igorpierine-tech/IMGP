@@ -9,7 +9,8 @@ import {
   BarChart3, ShieldCheck, Settings, Menu, X, ChevronLeft,
   FileText, Activity, Star, Users, ArrowLeft, Download,
   Layers, GitBranch, Tag, FileStack, TextCursorInput,
-  GitMerge, Zap, Webhook, Key,
+  GitMerge, Zap, Webhook, Key, GanttChart, Route,
+  Timer, Upload,
 } from "lucide-react";
 import GlobalSearch from "./components/global-search";
 import NotificationDropdown from "./components/notification-dropdown";
@@ -28,6 +29,8 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/painel/kanban", label: "Kanban", icon: KanbanSquare },
       { href: "/painel/calendario", label: "Calendário", icon: CalendarDays },
       { href: "/painel/demandas", label: "Demandas", icon: FileText },
+      { href: "/painel/gantt", label: "Gantt", icon: GanttChart },
+      { href: "/painel/timesheet", label: "Timesheet", icon: Timer },
     ],
   },
   {
@@ -36,6 +39,8 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/painel/okrs", label: "OKRs / Metas", icon: Target },
       { href: "/painel/portfolios", label: "Portfólios", icon: FolderKanban },
       { href: "/painel/metricas", label: "Métricas", icon: BarChart3 },
+      { href: "/painel/caminho-critico", label: "Caminho Crítico", icon: Route },
+      { href: "/painel/relatorios", label: "Relatórios", icon: BarChart3 },
       { href: "/painel/atividade", label: "Atividade", icon: Activity },
     ],
   },
@@ -59,6 +64,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/painel/aprovacoes", label: "Aprovações", icon: ShieldCheck },
       { href: "/painel/usuarios", label: "Usuários", icon: Users },
+      { href: "/painel/importar", label: "Importar", icon: Upload },
       { href: "/painel/exportar", label: "Exportar", icon: Download },
       { href: "/painel/preferencias", label: "Preferências", icon: Settings },
     ],
@@ -129,7 +135,7 @@ export default function AppShell({ user, children }: { user: User; children: Rea
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-2 px-2">
+        <nav className="flex-1 overflow-y-auto py-2 px-2" aria-label="Menu principal">
           {NAV_GROUPS.map((group) => (
             <div key={group.label} className="mb-1">
               {!collapsed && (
@@ -198,7 +204,7 @@ export default function AppShell({ user, children }: { user: User; children: Rea
           <NotificationDropdown />
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6 transition-page bg-gradient-to-br from-gray-50 via-gray-50 to-emerald-50/30">
+        <main id="main-content" className="flex-1 overflow-y-auto p-4 lg:p-6 transition-page bg-gradient-to-br from-gray-50 via-gray-50 to-emerald-50/30">
           {children}
         </main>
       </div>
