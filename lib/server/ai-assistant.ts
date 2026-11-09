@@ -1,108 +1,132 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { eq, desc, asc, sql, count, and, like } from "drizzle-orm";
+import OpenAI from "openai";
+import { eq, desc, asc, sql, count, and } from "drizzle-orm";
 import { projects, projectItems, demands, auditEvents } from "../../db/schema";
 import type { ApiContext } from "./api-context";
 
-const MODEL = "claude-sonnet-5-5";
+const MODEL = "gpt-4o";
 
 type Message = { role: "user" | "assistant"; content: string };
 
-function getAnthropicKey(): string | null {
+function getOpenAIKey(): string | null {
   try {
-    return (globalThis as Record<string, unknown>).ANTHROPIC_API_KEY as string | undefined ?? null;
+    return (globalThis as Record<string, unknown>).OPENAI_API_KEY as string | undefined ?? null;
   } catch {
     return null;
   }
 }
 
-const tools: Anthropic.Tool[] = [
+const tools: OpenAI.ChatCompletionTool[] = [
   {
-    name: "listar_projetos",
-    description: "Lista todos os projetos com nome, status, saúde, progresso e área. Use quando o usuário perguntar sobre projetos.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        status: { type: "string", description: "Filtrar por status: planning, in_progress, completed, cancelled" },
+    type: "function",
+    function: {
+      name: "listar_projetos",
+      description: "Lista todos os projetos com nome, status, saúde, progresso e área. Use quando o usuário perguntar sobre projetos.",
+      parameters: {
+        type: "object",
+        properties: {
+          status: { type: "string", description: "Filtrar por status: planning, in_progress, completed, cancelled" },
+        },
+        required: [],
       },
-      required: [],
     },
   },
   {
-    name: "buscar_metricas",
-    description: "Retorna métricas e KPIs do dashboard: total de projetos, tarefas, demandas, horas apontadas.",
-    input_schema: { type: "object" as const, properties: {}, required: [] },
-  },
-  {
-    name: "listar_tarefas",
-    description: "Lista tarefas de um projeto específico. Retorna nome, status, saúde, responsável.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        projectId: { type: "number", description: "ID do projeto" },
-        status: { type: "string", description: "Filtrar por status: planned, in_progress, blocked, review, done" },
-      },
-      required: ["projectId"],
+    type: "function",
+    function: {
+      name: "buscar_metricas",
+      description: "Retorna métricas e KPIs do dashboard: total de projetos, tarefas, demandas, horas apontadas.",
+      parameters: { type: "object", properties: {}, required: [] },
     },
   },
   {
-    name: "listar_demandas",
-    description: "Lista demandas (solicitações). Retorna nome, área, estágio, impacto.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        stage: { type: "string", description: "Filtrar por estágio: Triagem, Em Análise, Aprovada, Rejeitada, Concluída" },
+    type: "function",
+    function: {
+      name: "listar_tarefas",
+      description: "Lista tarefas de um projeto específico. Retorna nome, status, saúde, responsável.",
+      parameters: {
+        type: "object",
+        properties: {
+          projectId: { type: "number", description: "ID do projeto" },
+          status: { type: "string", description: "Filtrar por status: planned, in_progress, blocked, review, done" },
+        },
+        required: ["projectId"],
       },
-      required: [],
     },
   },
   {
-    name: "criar_tarefa",
-    description: "Cria uma nova tarefa em um projeto. Requer nome e projeto.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        projectId: { type: "number", description: "ID do projeto" },
-        name: { type: "string", description: "Nome da tarefa" },
-        status: { type: "string", description: "Status inicial: planned, in_progress, blocked, review, done", default: "planned" },
+    type: "function",
+    function: {
+      name: "listar_demandas",
+      description: "Lista demandas (solicitações). Retorna nome, área, estágio, impacto.",
+      parameters: {
+        type: "object",
+        properties: {
+          stage: { type: "string", description: "Filtrar por estágio: Triagem, Em Análise, Aprovada, Rejeitada, Concluída" },
+        },
+        required: [],
       },
-      required: ["projectId", "name"],
     },
   },
   {
-    name: "atualizar_status_tarefa",
-    description: "Atualiza o status de uma tarefa existente.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        taskId: { type: "number", description: "ID da tarefa" },
-        status: { type: "string", description: "Novo status: planned, in_progress, blocked, review, done" },
+    type: "function",
+    function: {
+      name: "criar_tarefa",
+      description: "Cria uma nova tarefa em um projeto. Requer nome e projeto.",
+      parameters: {
+        type: "object",
+        properties: {
+          projectId: { type: "number", description: "ID do projeto" },
+          name: { type: "string", description: "Nome da tarefa" },
+          status: { type: "string", description: "Status inicial: planned, in_progress, blocked, review, done", default: "planned" },
+        },
+        required: ["projectId", "name"],
       },
-      required: ["taskId", "status"],
     },
   },
   {
-    name: "criar_demanda",
-    description: "Cria uma nova demanda/solicitação.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        name: { type: "string", description: "Título da demanda" },
-        area: { type: "string", description: "Área: TI, Operações, RH, Financeiro, Comercial, Jurídico, Marketing" },
-        impact: { type: "string", description: "Impacto: Baixo, Médio, Alto" },
-        description: { type: "string", description: "Descrição da demanda" },
+    type: "function",
+    function: {
+      name: "atualizar_status_tarefa",
+      description: "Atualiza o status de uma tarefa existente.",
+      parameters: {
+        type: "object",
+        properties: {
+          taskId: { type: "number", description: "ID da tarefa" },
+          status: { type: "string", description: "Novo status: planned, in_progress, blocked, review, done" },
+        },
+        required: ["taskId", "status"],
       },
-      required: ["name", "area", "impact"],
     },
   },
   {
-    name: "buscar_atividade_recente",
-    description: "Retorna as atividades mais recentes do sistema (audit log).",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        limit: { type: "number", description: "Quantidade de registros (máx 20)", default: 10 },
+    type: "function",
+    function: {
+      name: "criar_demanda",
+      description: "Cria uma nova demanda/solicitação.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Título da demanda" },
+          area: { type: "string", description: "Área: TI, Operações, RH, Financeiro, Comercial, Jurídico, Marketing" },
+          impact: { type: "string", description: "Impacto: Baixo, Médio, Alto" },
+          description: { type: "string", description: "Descrição da demanda" },
+        },
+        required: ["name", "area", "impact"],
       },
-      required: [],
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "buscar_atividade_recente",
+      description: "Retorna as atividades mais recentes do sistema (audit log).",
+      parameters: {
+        type: "object",
+        properties: {
+          limit: { type: "number", description: "Quantidade de registros (máx 20)", default: 10 },
+        },
+        required: [],
+      },
     },
   },
 ];
@@ -247,64 +271,65 @@ export async function chat(
   messages: Message[],
   ctx: ApiContext,
 ): Promise<string> {
-  const apiKey = getAnthropicKey();
+  const apiKey = getOpenAIKey();
   if (!apiKey) {
-    return "O assistente de IA não está configurado. Peça ao administrador para configurar a variável ANTHROPIC_API_KEY.";
+    return "O assistente de IA não está configurado. Peça ao administrador para configurar a variável OPENAI_API_KEY.";
   }
 
-  const client = new Anthropic({ apiKey });
+  const client = new OpenAI({ apiKey });
 
-  const apiMessages: Anthropic.MessageParam[] = messages.map((m) => ({
-    role: m.role,
-    content: m.content,
-  }));
+  const apiMessages: OpenAI.ChatCompletionMessageParam[] = [
+    { role: "system", content: SYSTEM_PROMPT },
+    ...messages.map((m) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content,
+    })),
+  ];
 
-  let response = await client.messages.create({
+  let response = await client.chat.completions.create({
     model: MODEL,
     max_tokens: 4096,
-    system: SYSTEM_PROMPT,
     tools,
     messages: apiMessages,
   });
 
-  // Agentic loop: execute tools until Claude finishes
   const maxIterations = 5;
   let iteration = 0;
 
-  while (response.stop_reason === "tool_use" && iteration < maxIterations) {
+  while (
+    response.choices[0]?.finish_reason === "tool_calls" &&
+    iteration < maxIterations
+  ) {
     iteration++;
 
-    const toolUseBlocks = response.content.filter(
-      (b): b is Anthropic.ToolUseBlock => b.type === "tool_use",
+    const assistantMessage = response.choices[0].message;
+    apiMessages.push(assistantMessage);
+
+    const toolCalls = (assistantMessage.tool_calls ?? []).filter(
+      (tc): tc is OpenAI.ChatCompletionMessageFunctionToolCall => tc.type === "function",
     );
-
-    apiMessages.push({ role: "assistant", content: response.content });
-
-    const toolResults: Anthropic.ToolResultBlockParam[] = [];
-    for (const tool of toolUseBlocks) {
+    for (const toolCall of toolCalls) {
+      let result: string;
       try {
-        const result = await executeTool(tool.name, tool.input as Record<string, unknown>, ctx);
-        toolResults.push({ type: "tool_result", tool_use_id: tool.id, content: result });
+        const input = JSON.parse(toolCall.function.arguments) as Record<string, unknown>;
+        result = await executeTool(toolCall.function.name, input, ctx);
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Erro interno";
-        toolResults.push({ type: "tool_result", tool_use_id: tool.id, content: msg, is_error: true });
+        result = err instanceof Error ? err.message : "Erro interno";
       }
+      apiMessages.push({
+        role: "tool",
+        tool_call_id: toolCall.id,
+        content: result,
+      });
     }
 
-    apiMessages.push({ role: "user", content: toolResults });
-
-    response = await client.messages.create({
+    response = await client.chat.completions.create({
       model: MODEL,
       max_tokens: 4096,
-      system: SYSTEM_PROMPT,
       tools,
       messages: apiMessages,
     });
   }
 
-  const textBlocks = response.content.filter(
-    (b): b is Anthropic.TextBlock => b.type === "text",
-  );
-
-  return textBlocks.map((b) => b.text).join("\n") || "Não consegui gerar uma resposta.";
+  return response.choices[0]?.message?.content || "Não consegui gerar uma resposta.";
 }
