@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
-import { Loader2, FileText, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import NovaDemandaForm from "../components/nova-demanda-form";
+import Breadcrumbs from "../components/breadcrumbs";
+import { SkeletonTable } from "../components/skeleton";
+import EmptyState from "../components/empty-state";
+import { useToast } from "../components/toast";
 
 type Demand = {
   id: number;
@@ -30,6 +34,7 @@ const impactBadge: Record<string, string> = {
 };
 
 export default function DemandasPage() {
+  const { toast } = useToast();
   const [demands, setDemands] = useState<Demand[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -64,6 +69,7 @@ export default function DemandasPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Demandas" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Demandas</h1>
@@ -75,7 +81,7 @@ export default function DemandasPage() {
         </button>
       </div>
 
-      <NovaDemandaForm open={showNova} onClose={() => setShowNova(false)} onCreated={() => setRefreshKey((k) => k + 1)} />
+      <NovaDemandaForm open={showNova} onClose={() => setShowNova(false)} onCreated={() => { setRefreshKey((k) => k + 1); toast("Demanda criada com sucesso"); }} />
 
       <div className="flex flex-wrap gap-3">
         <select value={filterStage} onChange={(e) => setFilterStage(e.target.value)}
@@ -95,49 +101,63 @@ export default function DemandasPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando...</div>
+        <SkeletonTable rows={6} cols={6} />
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border p-12 text-center">
-          <FileText size={40} className="text-gray-300 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-gray-600">Nenhuma demanda cadastrada</h3>
-          <p className="text-sm text-gray-400 mt-1">Crie demandas para acompanhar solicitações.</p>
-          <button onClick={() => setShowNova(true)} className="mt-3 px-4 py-2 text-sm font-medium text-white bg-[#0c4a3e] rounded-lg hover:bg-[#0a3d33]">Criar primeira demanda</button>
-        </div>
+        <EmptyState icon="generic" title="Nenhuma demanda cadastrada" description="Crie demandas para acompanhar solicitações." action={{ label: "Criar primeira demanda", onClick: () => setShowNova(true) }} />
       ) : (
-        <div className="bg-white rounded-xl border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-gray-50 text-gray-500 text-left">
-                <th className="p-3 font-medium">Título</th>
-                <th className="p-3 font-medium">Área</th>
-                <th className="p-3 font-medium">Estágio</th>
-                <th className="p-3 font-medium">Impacto</th>
-                <th className="p-3 font-medium">Solicitante</th>
-                <th className="p-3 font-medium">Data</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((d) => (
-                <tr key={d.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
-                  <td className="p-3 font-medium text-gray-900 max-w-[250px] truncate">{d.name}</td>
-                  <td className="p-3 text-gray-600">{d.area}</td>
-                  <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${stageBadge[d.stage] ?? "bg-gray-100 text-gray-600"}`}>
-                      {d.stage ?? "Triagem"}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${impactBadge[d.impact] ?? "bg-gray-100 text-gray-600"}`}>
-                      {d.impact}
-                    </span>
-                  </td>
-                  <td className="p-3 text-gray-600">{d.requesterName ?? "—"}</td>
-                  <td className="p-3 text-gray-400 text-xs">{new Date(d.createdAt).toLocaleDateString("pt-BR")}</td>
+        <>
+          {/* Desktop table */}
+          <div className="bg-white rounded-xl border overflow-hidden hidden md:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-gray-50 text-gray-500 text-left">
+                  <th className="p-3 font-medium">Título</th>
+                  <th className="p-3 font-medium">Área</th>
+                  <th className="p-3 font-medium">Estágio</th>
+                  <th className="p-3 font-medium">Impacto</th>
+                  <th className="p-3 font-medium">Solicitante</th>
+                  <th className="p-3 font-medium">Data</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filtered.map((d) => (
+                  <tr key={d.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
+                    <td className="p-3 font-medium text-gray-900 max-w-[250px] truncate">{d.name}</td>
+                    <td className="p-3 text-gray-600">{d.area}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${stageBadge[d.stage] ?? "bg-gray-100 text-gray-600"}`}>
+                        {d.stage ?? "Triagem"}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${impactBadge[d.impact] ?? "bg-gray-100 text-gray-600"}`}>
+                        {d.impact}
+                      </span>
+                    </td>
+                    <td className="p-3 text-gray-600">{d.requesterName ?? "—"}</td>
+                    <td className="p-3 text-gray-400 text-xs">{new Date(d.createdAt).toLocaleDateString("pt-BR")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Mobile cards */}
+          <div className="space-y-3 md:hidden">
+            {filtered.map((d) => (
+              <div key={d.id} className="bg-white rounded-xl border p-4 space-y-2">
+                <div className="font-medium text-gray-900 text-sm">{d.name}</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${stageBadge[d.stage] ?? "bg-gray-100 text-gray-600"}`}>{d.stage ?? "Triagem"}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${impactBadge[d.impact] ?? "bg-gray-100 text-gray-600"}`}>{d.impact}</span>
+                </div>
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>{d.area}</span>
+                  <span>{new Date(d.createdAt).toLocaleDateString("pt-BR")}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

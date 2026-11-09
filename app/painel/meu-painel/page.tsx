@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
 import { Loader2, CheckCircle2, Clock, AlertTriangle, Bell, Star } from "lucide-react";
+import Breadcrumbs from "../components/breadcrumbs";
 import { TimeTrackerButton } from "../components/time-tracker";
 
 type MyDashboard = {
@@ -40,6 +41,7 @@ export default function MeuPainelPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Meu Painel" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div><h1 className="text-2xl font-bold text-gray-900">Meu Painel</h1><p className="text-sm text-gray-500 mt-1">Suas tarefas, prazos e atividade recente</p></div>
         <TimeTrackerButton />

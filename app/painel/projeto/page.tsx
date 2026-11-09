@@ -13,6 +13,7 @@ import NovoSprintForm from "../components/novo-sprint-form";
 import CommentsSection from "../components/comments-section";
 import EditProjectForm from "../components/edit-project-form";
 import EditTarefaForm from "../components/edit-tarefa-form";
+import Breadcrumbs from "../components/breadcrumbs";
 
 type Project = {
   id: number; name: string; code?: string; area?: string; managerName?: string;
@@ -114,11 +115,7 @@ export default function ProjetoDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2 text-sm">
-        <Link href="/painel" className="text-gray-500 hover:text-gray-700">Dashboard</Link>
-        <ChevronRight size={14} className="text-gray-400" />
-        <span className="font-medium text-gray-900">{project.name}</span>
-      </div>
+      <Breadcrumbs items={[{ label: "Projetos", href: "/painel" }, { label: project.name }]} />
 
       <div className="bg-white rounded-xl border p-6">
         <div className="flex items-start justify-between flex-wrap gap-4">

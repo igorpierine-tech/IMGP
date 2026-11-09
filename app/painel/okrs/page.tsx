@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
 import { Loader2, Target, Plus, ChevronDown, ChevronRight } from "lucide-react";
 import NovoObjetivoForm, { NovoKeyResultForm } from "../components/novo-objetivo-form";
+import Breadcrumbs from "../components/breadcrumbs";
+import { SkeletonTable } from "../components/skeleton";
+import EmptyState from "../components/empty-state";
+import { useToast } from "../components/toast";
 
 type KeyResult = { id: number; title: string; metricType: string; targetValue: number; currentValue: number; unit?: string };
 type Objective = { id: number; title: string; description?: string; status: string; progress: number; period?: string; createdAt: string };
@@ -42,7 +46,9 @@ export default function OkrsPage() {
     setExpanded((prev) => ({ ...prev, [id]: { krs: body.keyResults ?? [], loaded: true } }));
   }
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando OKRs...</div>;
+  const { toast } = useToast();
+
+  if (loading) return <SkeletonTable rows={4} cols={3} />;
   if (error) return <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">{error}</div>;
 
   const statusColors: Record<string, string> = {
@@ -53,6 +59,7 @@ export default function OkrsPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "OKRs / Metas" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">OKRs / Metas</h1>
@@ -63,18 +70,13 @@ export default function OkrsPage() {
           <Plus size={16} /> Novo Objetivo
         </button>
       </div>
-      <NovoObjetivoForm open={showNovoObj} onClose={() => setShowNovoObj(false)} onCreated={() => setRefreshKey((k) => k + 1)} />
+      <NovoObjetivoForm open={showNovoObj} onClose={() => setShowNovoObj(false)} onCreated={() => { setRefreshKey((k) => k + 1); toast("Objetivo criado com sucesso"); }} />
       {krTarget !== null && (
         <NovoKeyResultForm open objectiveId={krTarget} onClose={() => setKrTarget(null)} onCreated={() => { setRefreshKey((k) => k + 1); setExpanded({}); }} />
       )}
 
       {objectives.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <Target size={40} className="text-gray-300 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-gray-600">Nenhum objetivo definido</h3>
-          <p className="text-sm text-gray-400 mt-1">Crie objetivos para começar a acompanhar.</p>
-          <button onClick={() => setShowNovoObj(true)} className="mt-3 px-4 py-2 text-sm font-medium text-white bg-[#0c4a3e] rounded-lg hover:bg-[#0a3d33]">Criar primeiro objetivo</button>
-        </div>
+        <EmptyState icon="generic" title="Nenhum objetivo definido" description="Crie objetivos para começar a acompanhar." action={{ label: "Criar primeiro objetivo", onClick: () => setShowNovoObj(true) }} />
       ) : (
         <div className="space-y-3">
           {objectives.map((obj) => (

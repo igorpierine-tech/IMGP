@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
 import { Loader2, BarChart3, TrendingUp, Users, Clock } from "lucide-react";
+import Breadcrumbs from "../components/breadcrumbs";
 
 type MetricsData = {
   velocity?: { sprintName: string; pointsCompleted: number; tasksCompleted: number }[];
@@ -38,6 +39,7 @@ export default function MetricasPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Métricas" }]} />
       <div><h1 className="text-2xl font-bold text-gray-900">Métricas</h1><p className="text-sm text-gray-500 mt-1">Indicadores de performance e produtividade</p></div>
 
       <div className="flex gap-2 flex-wrap">

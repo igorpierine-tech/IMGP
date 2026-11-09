@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
 import { Loader2, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import Breadcrumbs from "../components/breadcrumbs";
 
 type CalendarEvent = { id: number; title: string; start: string; end?: string; type: string; status?: string; color?: string };
 
@@ -65,6 +66,7 @@ export default function CalendarioPage() {
 
   return (
     <div className="space-y-4">
+      <Breadcrumbs items={[{ label: "Calendário" }]} />
       <div><h1 className="text-2xl font-bold text-gray-900">Calendário</h1><p className="text-sm text-gray-500 mt-1">Tarefas e sprints no mês</p></div>
 
       <div className="bg-white rounded-xl border">

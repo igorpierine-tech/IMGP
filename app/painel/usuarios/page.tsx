@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
 import { Loader2, Users, Plus, Shield, ToggleLeft, ToggleRight, Edit2 } from "lucide-react";
 import FormDialog, { FormField, FormActions, inputClass, selectClass } from "../components/form-dialog";
+import Breadcrumbs from "../components/breadcrumbs";
+import { SkeletonTable } from "../components/skeleton";
+import EmptyState from "../components/empty-state";
+import { useToast } from "../components/toast";
 
 type User = {
   id: string; email: string; displayName: string; role: string;
@@ -113,6 +117,7 @@ function EditUserForm({ user, onClose, onSaved }: { user: User; onClose: () => v
 }
 
 export default function UsuariosPage() {
+  const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -141,6 +146,7 @@ export default function UsuariosPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Usuários" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Usuários</h1>
@@ -152,8 +158,8 @@ export default function UsuariosPage() {
         </button>
       </div>
 
-      <NovoUsuarioForm open={showNovo} onClose={() => setShowNovo(false)} onCreated={() => setRefreshKey((k) => k + 1)} />
-      {editing && <EditUserForm user={editing} onClose={() => setEditing(null)} onSaved={() => { setRefreshKey((k) => k + 1); setEditing(null); }} />}
+      <NovoUsuarioForm open={showNovo} onClose={() => setShowNovo(false)} onCreated={() => { setRefreshKey((k) => k + 1); toast("Usuário criado com sucesso"); }} />
+      {editing && <EditUserForm user={editing} onClose={() => setEditing(null)} onSaved={() => { setRefreshKey((k) => k + 1); setEditing(null); toast("Usuário atualizado"); }} />}
 
       <div>
         <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filtrar por nome, email ou perfil..."
@@ -161,45 +167,66 @@ export default function UsuariosPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando...</div>
+        <SkeletonTable rows={5} cols={6} />
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border p-12 text-center">
-          <Users size={40} className="text-gray-300 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-gray-600">Nenhum usuário encontrado</h3>
-        </div>
+        <EmptyState icon="generic" title="Nenhum usuário encontrado" action={{ label: "Novo Usuário", onClick: () => setShowNovo(true) }} />
       ) : (
-        <div className="bg-white rounded-xl border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead><tr className="border-b bg-gray-50 text-gray-500 text-left">
-              <th className="p-3 font-medium">Nome</th><th className="p-3 font-medium">E-mail</th>
-              <th className="p-3 font-medium">Perfil</th><th className="p-3 font-medium">Status</th>
-              <th className="p-3 font-medium">Último acesso</th><th className="p-3 font-medium w-10"></th>
-            </tr></thead>
-            <tbody>
-              {filtered.map((u) => (
-                <tr key={u.id} className="border-b last:border-0 hover:bg-gray-50">
-                  <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-[#0c4a3e] text-white flex items-center justify-center text-xs font-medium">{u.displayName.charAt(0).toUpperCase()}</div>
-                      <span className="font-medium text-gray-900">{u.displayName}</span>
-                    </div>
-                  </td>
-                  <td className="p-3 text-gray-600">{u.email}</td>
-                  <td className="p-3"><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">{roleNames[u.role] ?? u.role}</span></td>
-                  <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.active ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
-                      {u.active ? "Ativo" : "Inativo"}
-                    </span>
-                  </td>
-                  <td className="p-3 text-gray-400 text-xs">{u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleDateString("pt-BR") : "Nunca"}</td>
-                  <td className="p-3">
-                    <button onClick={() => setEditing(u)} className="text-gray-400 hover:text-gray-600"><Edit2 size={14} /></button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {/* Desktop table */}
+          <div className="bg-white rounded-xl border overflow-hidden hidden md:block">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b bg-gray-50 text-gray-500 text-left">
+                <th className="p-3 font-medium">Nome</th><th className="p-3 font-medium">E-mail</th>
+                <th className="p-3 font-medium">Perfil</th><th className="p-3 font-medium">Status</th>
+                <th className="p-3 font-medium">Último acesso</th><th className="p-3 font-medium w-10"></th>
+              </tr></thead>
+              <tbody>
+                {filtered.map((u) => (
+                  <tr key={u.id} className="border-b last:border-0 hover:bg-gray-50">
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-[#0c4a3e] text-white flex items-center justify-center text-xs font-medium">{u.displayName.charAt(0).toUpperCase()}</div>
+                        <span className="font-medium text-gray-900">{u.displayName}</span>
+                      </div>
+                    </td>
+                    <td className="p-3 text-gray-600">{u.email}</td>
+                    <td className="p-3"><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">{roleNames[u.role] ?? u.role}</span></td>
+                    <td className="p-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.active ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                        {u.active ? "Ativo" : "Inativo"}
+                      </span>
+                    </td>
+                    <td className="p-3 text-gray-400 text-xs">{u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleDateString("pt-BR") : "Nunca"}</td>
+                    <td className="p-3">
+                      <button onClick={() => setEditing(u)} className="text-gray-400 hover:text-gray-600"><Edit2 size={14} /></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Mobile cards */}
+          <div className="space-y-3 md:hidden">
+            {filtered.map((u) => (
+              <div key={u.id} className="bg-white rounded-xl border p-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-9 h-9 rounded-full bg-[#0c4a3e] text-white flex items-center justify-center text-sm font-medium">{u.displayName.charAt(0).toUpperCase()}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-900 text-sm truncate">{u.displayName}</div>
+                    <div className="text-xs text-gray-500 truncate">{u.email}</div>
+                  </div>
+                  <button onClick={() => setEditing(u)} className="text-gray-400 hover:text-gray-600"><Edit2 size={16} /></button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">{roleNames[u.role] ?? u.role}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.active ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                    {u.active ? "Ativo" : "Inativo"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

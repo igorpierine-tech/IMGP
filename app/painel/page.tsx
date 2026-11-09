@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
 import Link from "next/link";
-import { BarChart3, FolderOpen, CheckCircle2, Clock, AlertTriangle, TrendingUp, Loader2, Plus } from "lucide-react";
+import { BarChart3, FolderOpen, CheckCircle2, Clock, AlertTriangle, TrendingUp, Plus } from "lucide-react";
 import NovoProjetoForm from "./components/novo-projeto-form";
 import NovaDemandaForm from "./components/nova-demanda-form";
+import { SkeletonDashboard } from "./components/skeleton";
+import { useToast } from "./components/toast";
 
 type DashboardData = {
   projects: { total: number; planning: number; inProgress: number; completed: number; onTrack: number; attention: number; late: number };
@@ -101,6 +103,7 @@ function BarChartSimple({ data }: { data: { label: string; value: number }[] }) 
 }
 
 export default function DashboardPage() {
+  const { toast } = useToast();
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState("");
   const [showNovoProjeto, setShowNovoProjeto] = useState(false);
@@ -117,7 +120,7 @@ export default function DashboardPage() {
   }, []);
 
   if (!data && !error) {
-    return <div className="flex items-center justify-center h-64 text-gray-400"><Loader2 className="animate-spin mr-2" size={20} /> Carregando dashboard...</div>;
+    return <SkeletonDashboard />;
   }
 
   if (error) {
@@ -145,8 +148,8 @@ export default function DashboardPage() {
           </button>
         </div>
       </div>
-      <NovoProjetoForm open={showNovoProjeto} onClose={() => setShowNovoProjeto(false)} onCreated={() => window.location.reload()} />
-      <NovaDemandaForm open={showNovaDemanda} onClose={() => setShowNovaDemanda(false)} onCreated={() => window.location.reload()} />
+      <NovoProjetoForm open={showNovoProjeto} onClose={() => setShowNovoProjeto(false)} onCreated={() => { toast("Projeto criado com sucesso"); window.location.reload(); }} />
+      <NovaDemandaForm open={showNovaDemanda} onClose={() => setShowNovaDemanda(false)} onCreated={() => { toast("Demanda criada com sucesso"); window.location.reload(); }} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={FolderOpen} label="Projetos ativos" value={d.projects.inProgress} sub={`${d.projects.total} no total`} color="bg-blue-50 text-blue-600" />

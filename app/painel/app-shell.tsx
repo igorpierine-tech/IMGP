@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { appPath } from "@/lib/app-path";
@@ -11,23 +11,41 @@ import {
 } from "lucide-react";
 import GlobalSearch from "./components/global-search";
 import NotificationDropdown from "./components/notification-dropdown";
+import DarkModeToggle from "./components/dark-mode-toggle";
 
 type User = { id: string; email: string; displayName: string; role: string };
 
-const NAV_ITEMS = [
-  { href: "/painel", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/painel/meu-painel", label: "Meu Painel", icon: Star },
-  { href: "/painel/kanban", label: "Kanban", icon: KanbanSquare },
-  { href: "/painel/calendario", label: "Calendário", icon: CalendarDays },
-  { href: "/painel/okrs", label: "OKRs / Metas", icon: Target },
-  { href: "/painel/portfolios", label: "Portfólios", icon: FolderKanban },
-  { href: "/painel/metricas", label: "Métricas", icon: BarChart3 },
-  { href: "/painel/demandas", label: "Demandas", icon: FileText },
-  { href: "/painel/aprovacoes", label: "Aprovações", icon: ShieldCheck },
-  { href: "/painel/atividade", label: "Atividade", icon: Activity },
-  { href: "/painel/usuarios", label: "Usuários", icon: Users },
-  { href: "/painel/exportar", label: "Exportar", icon: Download },
-  { href: "/painel/preferencias", label: "Preferências", icon: Settings },
+type NavGroup = { label: string; items: { href: string; label: string; icon: typeof LayoutDashboard }[] };
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: "Gestão",
+    items: [
+      { href: "/painel", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/painel/meu-painel", label: "Meu Painel", icon: Star },
+      { href: "/painel/kanban", label: "Kanban", icon: KanbanSquare },
+      { href: "/painel/calendario", label: "Calendário", icon: CalendarDays },
+      { href: "/painel/demandas", label: "Demandas", icon: FileText },
+    ],
+  },
+  {
+    label: "Análise",
+    items: [
+      { href: "/painel/okrs", label: "OKRs / Metas", icon: Target },
+      { href: "/painel/portfolios", label: "Portfólios", icon: FolderKanban },
+      { href: "/painel/metricas", label: "Métricas", icon: BarChart3 },
+      { href: "/painel/atividade", label: "Atividade", icon: Activity },
+    ],
+  },
+  {
+    label: "Configurações",
+    items: [
+      { href: "/painel/aprovacoes", label: "Aprovações", icon: ShieldCheck },
+      { href: "/painel/usuarios", label: "Usuários", icon: Users },
+      { href: "/painel/exportar", label: "Exportar", icon: Download },
+      { href: "/painel/preferencias", label: "Preferências", icon: Settings },
+    ],
+  },
 ];
 
 const roleNames: Record<string, string> = {
@@ -45,7 +63,17 @@ export default function AppShell({ user, children }: { user: User; children: Rea
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const basePath = appPath("");
+  useEffect(() => {
+    const theme = localStorage.getItem("theme");
+    if (theme === "dark") document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
+    const observer = new MutationObserver(() => {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      document.documentElement.classList.toggle("dark", isDark);
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
 
   function isActive(href: string) {
     const full = appPath(href);
@@ -56,7 +84,7 @@ export default function AppShell({ user, children }: { user: User; children: Rea
   return (
     <div className="flex h-screen bg-gray-50">
       {mobileOpen && (
-        <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMobileOpen(false)} />
+        <div className="fixed inset-0 z-40 bg-black/40 lg:hidden animate-fade-in" onClick={() => setMobileOpen(false)} />
       )}
 
       <aside className={`
@@ -85,25 +113,35 @@ export default function AppShell({ user, children }: { user: User; children: Rea
         </div>
 
         <nav className="flex-1 overflow-y-auto py-2 px-2">
-          {NAV_ITEMS.map((item) => {
-            const active = isActive(item.href);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mb-0.5
-                  ${active ? "bg-[#0c4a3e] text-white" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"}
-                  ${collapsed ? "justify-center" : ""}
-                `}
-                title={collapsed ? item.label : undefined}
-              >
-                <Icon size={18} className="shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
-            );
-          })}
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} className="mb-1">
+              {!collapsed && (
+                <div className="px-3 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  {group.label}
+                </div>
+              )}
+              {collapsed && group.label !== "Gestão" && <div className="mx-2 my-2 border-t border-gray-100" />}
+              {group.items.map((item) => {
+                const active = isActive(item.href);
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mb-0.5
+                      ${active ? "bg-[#0c4a3e] text-white" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"}
+                      ${collapsed ? "justify-center" : ""}
+                    `}
+                    title={collapsed ? item.label : undefined}
+                  >
+                    <Icon size={18} className="shrink-0" />
+                    {!collapsed && <span>{item.label}</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         <div className={`border-t border-gray-100 p-3 ${collapsed ? "text-center" : ""}`}>
@@ -139,10 +177,11 @@ export default function AppShell({ user, children }: { user: User; children: Rea
           </button>
           <div className="flex-1" />
           <GlobalSearch />
+          <DarkModeToggle />
           <NotificationDropdown />
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 transition-page">
           {children}
         </main>
       </div>

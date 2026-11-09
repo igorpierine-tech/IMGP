@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
 import { Loader2, FolderKanban, ChevronRight, Plus } from "lucide-react";
+import Breadcrumbs from "../components/breadcrumbs";
 import NovoPortfolioForm from "../components/novo-portfolio-form";
 
 type Portfolio = { id: number; name: string; description?: string };
@@ -92,6 +93,7 @@ export default function PortfoliosPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Portfólios" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div><h1 className="text-2xl font-bold text-gray-900">Portfólios</h1><p className="text-sm text-gray-500 mt-1">Agrupamentos estratégicos de projetos</p></div>
         <button onClick={() => setShowNovo(true)}

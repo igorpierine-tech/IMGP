@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
-import { Loader2, Send, MessageSquare } from "lucide-react";
+import { Loader2, Send, MessageSquare, Trash2 } from "lucide-react";
+import ConfirmDialog from "./confirm-dialog";
+import { useToast } from "./toast";
 
 type Comment = {
   id: number; body: string; displayName?: string; userId: string;
@@ -10,10 +12,12 @@ type Comment = {
 };
 
 export default function CommentsSection({ entityType, entityId }: { entityType: string; entityId: number }) {
+  const { toast } = useToast();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
 
   function load() {
     setLoading(true);
@@ -53,8 +57,24 @@ export default function CommentsSection({ entityType, entityId }: { entityType: 
     return `${Math.floor(hrs / 24)}d`;
   }
 
+  async function handleDelete() {
+    if (deleteTarget === null) return;
+    try {
+      const r = await fetch(appPath("/api/comments"), {
+        method: "DELETE", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: deleteTarget }),
+      });
+      if (!r.ok) throw new Error("Erro ao excluir");
+      toast("Comentário excluído");
+      load();
+    } catch { toast("Erro ao excluir comentário", "error"); }
+    finally { setDeleteTarget(null); }
+  }
+
   return (
     <div className="space-y-4">
+      <ConfirmDialog open={deleteTarget !== null} title="Excluir comentário" message="Tem certeza que deseja excluir este comentário? Esta ação não pode ser desfeita." confirmLabel="Excluir" onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />
       <form onSubmit={submit} className="flex gap-2">
         <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Escreva um comentário..."
           className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0c4a3e]/20 focus:border-[#0c4a3e] outline-none" />
@@ -84,6 +104,9 @@ export default function CommentsSection({ entityType, entityId }: { entityType: 
                 {c.editedAt && <span className="text-xs text-gray-400">(editado)</span>}
               </div>
               <p className="text-sm text-gray-700 whitespace-pre-wrap">{c.body}</p>
+              <button onClick={() => setDeleteTarget(c.id)} className="text-xs text-gray-400 hover:text-red-500 mt-1 flex items-center gap-1 transition-colors">
+                <Trash2 size={11} /> Excluir
+              </button>
             </div>
           ))}
         </div>

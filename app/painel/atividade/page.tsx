@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
 import { Loader2, Activity } from "lucide-react";
+import Breadcrumbs from "../components/breadcrumbs";
 
 type AuditEvent = { id: number; occurredAt: string; actor?: { displayName?: string; email?: string } | null; action: string; entityType: string; entityId?: string };
 
@@ -28,6 +29,7 @@ export default function AtividadePage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Atividade" }]} />
       <div className="flex items-center justify-between">
         <div><h1 className="text-2xl font-bold text-gray-900">Atividade</h1><p className="text-sm text-gray-500 mt-1">Feed de auditoria e ações recentes</p></div>
         <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="text-sm border rounded-lg px-3 py-1.5 text-gray-600">

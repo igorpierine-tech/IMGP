@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
 import { Loader2, Save, Settings } from "lucide-react";
+import Breadcrumbs from "../components/breadcrumbs";
 
 const PREF_OPTIONS: { key: string; label: string; options: { value: string; label: string }[] }[] = [
   { key: "theme", label: "Tema", options: [{ value: "light", label: "Claro" }, { value: "dark", label: "Escuro" }, { value: "system", label: "Sistema" }] },
@@ -58,6 +59,7 @@ export default function PreferenciasPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
+      <Breadcrumbs items={[{ label: "Preferências" }]} />
       <div><h1 className="text-2xl font-bold text-gray-900">Preferências</h1><p className="text-sm text-gray-500 mt-1">Personalize sua experiência na plataforma</p></div>
 
       <div className="bg-white rounded-xl border divide-y">

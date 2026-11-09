@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { appPath } from "@/lib/app-path";
 import { Download, FileSpreadsheet, FileJson, Loader2, CheckCircle2 } from "lucide-react";
+import Breadcrumbs from "../components/breadcrumbs";
+import { useToast } from "../components/toast";
 
 const entities = [
   { value: "projects", label: "Projetos", icon: "folder" },
@@ -14,6 +16,7 @@ const entities = [
 type Format = "csv" | "json";
 
 export default function ExportarPage() {
+  const { toast } = useToast();
   const [entity, setEntity] = useState<string>("projects");
   const [format, setFormat] = useState<Format>("csv");
   const [exporting, setExporting] = useState(false);
@@ -34,12 +37,14 @@ export default function ExportarPage() {
       document.body.appendChild(a); a.click();
       document.body.removeChild(a); URL.revokeObjectURL(url);
       setSuccess(`${filename} exportado com sucesso.`);
+      toast(`${filename} exportado com sucesso`);
     } catch {}
     finally { setExporting(false); }
   }
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Exportar" }]} />
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Exportar Relatórios</h1>
         <p className="text-sm text-gray-500 mt-1">Exporte dados do sistema em CSV ou JSON</p>

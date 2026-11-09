@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { appPath } from "@/lib/app-path";
 import { Loader2, ShieldCheck, Clock, CheckCircle2, XCircle } from "lucide-react";
+import Breadcrumbs from "../components/breadcrumbs";
 
 type ApprovalRequest = { id: number; chainId: number; entityType: string; entityId: number; currentStep: number; status: string; requestedBy: string; createdAt: string };
 type Chain = { id: number; name: string; entityType: string; stepsJson: string; active: boolean };
@@ -38,6 +39,7 @@ export default function AprovacoesPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Aprovações" }]} />
       <div><h1 className="text-2xl font-bold text-gray-900">Aprovações</h1><p className="text-sm text-gray-500 mt-1">Fluxos de aprovação em cadeia</p></div>
 
       <div className="flex gap-2">
