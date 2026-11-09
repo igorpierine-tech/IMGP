@@ -154,6 +154,14 @@ export default function ProjetoDetailPage() {
   const epicMap = new Map<number, TaskItem>();
   for (const ep of epics) epicMap.set(ep.id, ep);
 
+  function epicNumber(name: string): number {
+    const m = name.match(/^(\d+)/);
+    return m ? parseInt(m[1], 10) : Infinity;
+  }
+  function taskDate(t: TaskItem): string {
+    return t.plannedEnd ?? t.plannedStart ?? "￿";
+  }
+
   type GroupedSection = { epic: TaskItem | null; tasks: TaskItem[] };
   const grouped: GroupedSection[] = [];
   const epicTaskMap = new Map<number, TaskItem[]>();
@@ -169,7 +177,11 @@ export default function ProjetoDetailPage() {
       orphanTasks.push(t);
     }
   }
-  for (const ep of sortedTasks.filter((t) => t.kind === "epic")) {
+  for (const [, arr] of epicTaskMap) arr.sort((a, b) => taskDate(a).localeCompare(taskDate(b)));
+  orphanTasks.sort((a, b) => taskDate(a).localeCompare(taskDate(b)));
+
+  const sortedEpics = sortedTasks.filter((t) => t.kind === "epic").sort((a, b) => epicNumber(a.name) - epicNumber(b.name));
+  for (const ep of sortedEpics) {
     grouped.push({ epic: ep, tasks: epicTaskMap.get(ep.id) ?? [] });
   }
   if (orphanTasks.length > 0) grouped.push({ epic: null, tasks: orphanTasks });
