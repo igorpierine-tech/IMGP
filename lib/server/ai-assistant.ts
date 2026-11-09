@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { env } from "cloudflare:workers";
 import { eq, desc, asc, sql, count, and } from "drizzle-orm";
 import { projects, projectItems, demands, auditEvents } from "../../db/schema";
 import type { ApiContext } from "./api-context";
@@ -9,7 +10,7 @@ type Message = { role: "user" | "assistant"; content: string };
 
 function getOpenAIKey(): string | null {
   try {
-    return (globalThis as Record<string, unknown>).OPENAI_API_KEY as string | undefined ?? null;
+    return (env as Record<string, unknown>).OPENAI_API_KEY as string | undefined ?? null;
   } catch {
     return null;
   }
