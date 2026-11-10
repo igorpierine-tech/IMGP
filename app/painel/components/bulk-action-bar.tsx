@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { appPath } from "@/lib/app-path";
-import { Trash2, RefreshCw, UserCheck, X } from "lucide-react";
+import { Trash2, RefreshCw, X } from "lucide-react";
+import { useMembers } from "./user-select";
 
 type BulkActionBarProps = {
   selectedIds: number[];
@@ -23,6 +24,7 @@ const DEFAULT_STATUS_OPTIONS = [
 export default function BulkActionBar({ selectedIds, onClear, onDone, toast, statusOptions }: BulkActionBarProps) {
   const [loading, setLoading] = useState(false);
   const opts = statusOptions ?? DEFAULT_STATUS_OPTIONS;
+  const members = useMembers();
 
   async function bulkAction(action: string, extra: Record<string, unknown> = {}) {
     setLoading(true);
@@ -54,10 +56,8 @@ export default function BulkActionBar({ selectedIds, onClear, onDone, toast, sta
     await bulkAction("update_status", { status });
   }
 
-  async function handleAssignee() {
-    const name = prompt("Nome do responsável (vazio para remover):");
-    if (name === null) return;
-    await bulkAction("update_assignee", { assignedName: name.trim() || null });
+  async function handleAssignee(name: string) {
+    await bulkAction("update_assignee", { assignedName: name === "__remove__" ? null : name });
   }
 
   if (selectedIds.length === 0) return null;
@@ -78,10 +78,16 @@ export default function BulkActionBar({ selectedIds, onClear, onDone, toast, sta
           <option value="" disabled>Alterar status...</option>
           {opts.map((s) => <option key={s.value} value={s.value} className="text-gray-900">{s.label}</option>)}
         </select>
-        <button onClick={handleAssignee} disabled={loading}
-          className="flex items-center gap-1 text-xs bg-white/15 border border-white/20 rounded-md px-2 py-1.5 hover:bg-white/25 transition-colors disabled:opacity-50">
-          <UserCheck size={13} /> Responsável
-        </button>
+        <select
+          disabled={loading}
+          defaultValue=""
+          onChange={(e) => { if (e.target.value) handleAssignee(e.target.value); e.target.value = ""; }}
+          className="text-xs bg-white/15 border border-white/20 text-white rounded-md px-2 py-1.5 outline-none hover:bg-white/25 transition-colors cursor-pointer disabled:opacity-50"
+        >
+          <option value="" disabled>Responsável...</option>
+          <option value="__remove__" className="text-gray-900">Remover responsável</option>
+          {members.map((m) => <option key={m.id} value={m.displayName} className="text-gray-900">{m.displayName}</option>)}
+        </select>
         <button onClick={handleDelete} disabled={loading}
           className="flex items-center gap-1 text-xs bg-red-500/80 border border-red-400/30 rounded-md px-2 py-1.5 hover:bg-red-500 transition-colors disabled:opacity-50">
           <Trash2 size={13} /> Excluir

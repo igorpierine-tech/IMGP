@@ -4,6 +4,7 @@ import { useState, useEffect, FormEvent } from "react";
 import { appPath } from "@/lib/app-path";
 import FormDialog, { FormField, FormActions, inputClass, selectClass } from "./form-dialog";
 import { useFormValidation, FieldError } from "./form-validation";
+import UserSelect from "./user-select";
 
 type ProjectType = { id: number; name: string; active: boolean };
 
@@ -114,7 +115,7 @@ export default function NovoProjetoForm({ open, onClose, onCreated }: { open: bo
         </div>
 
         <FormField label="Gerente responsável">
-          <input value={managerName} onChange={(e) => setManagerName(e.target.value)} className={inputClass} />
+          <UserSelect value={managerName} onChange={setManagerName} className={selectClass} placeholder="Selecione o gerente" />
         </FormField>
 
         <FormField label="Status">

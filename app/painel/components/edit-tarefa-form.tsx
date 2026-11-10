@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { appPath } from "@/lib/app-path";
 import FormDialog, { FormField, FormActions, inputClass, selectClass } from "./form-dialog";
+import UserSelect from "./user-select";
 
 type Task = {
   id: number; name: string; kind: string; status: string; health: string;
@@ -92,7 +93,7 @@ export default function EditTarefaForm({ task, onClose, onSaved }: { task: Task;
             </select>
           </FormField>
         </div>
-        <FormField label="Responsável"><input value={assignedName} onChange={(e) => setAssignedName(e.target.value)} className={inputClass} /></FormField>
+        <FormField label="Responsável"><UserSelect value={assignedName} onChange={setAssignedName} className={selectClass} /></FormField>
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Prazo"><input type="date" value={plannedEnd} onChange={(e) => setPlannedEnd(e.target.value)} className={inputClass} /></FormField>
           <FormField label="Horas planejadas"><input type="number" min={0} value={plannedHours} onChange={(e) => setPlannedHours(Number(e.target.value))} className={inputClass} /></FormField>

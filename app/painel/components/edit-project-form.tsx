@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { appPath } from "@/lib/app-path";
 import FormDialog, { FormField, FormActions, inputClass, selectClass } from "./form-dialog";
+import UserSelect from "./user-select";
 
 type Project = {
   id: number; name: string; code?: string; area?: string; managerName?: string;
@@ -41,7 +42,7 @@ export default function EditProjectForm({ project, onClose, onSaved }: { project
       const r = await fetch(appPath("/api/projects"), {
         method: "PATCH", credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: project.id, projectTypeId, status }),
+        body: JSON.stringify({ id: project.id, projectTypeId, status, managerName: managerName || null }),
       });
       if (!r.ok) { const b = await r.json() as { error?: string }; throw new Error(b.error ?? "Erro"); }
       onSaved();
@@ -70,6 +71,9 @@ export default function EditProjectForm({ project, onClose, onSaved }: { project
           </FormField>
           <FormField label="Código"><input value={code} readOnly className={`${inputClass} bg-gray-50`} /></FormField>
         </div>
+        <FormField label="Gerente responsável">
+          <UserSelect value={managerName} onChange={setManagerName} className={selectClass} placeholder="Selecione o gerente" />
+        </FormField>
         <FormActions onClose={onClose} saving={saving} label="Salvar" />
       </form>
     </FormDialog>

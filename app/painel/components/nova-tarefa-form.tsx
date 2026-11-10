@@ -3,6 +3,7 @@
 import { useState, useEffect, FormEvent } from "react";
 import { appPath } from "@/lib/app-path";
 import FormDialog, { FormField, FormActions, inputClass, selectClass } from "./form-dialog";
+import UserSelect from "./user-select";
 
 type ProjectOption = { id: number; name: string };
 type EpicOption = { id: number; name: string };
@@ -157,7 +158,7 @@ export default function NovaTarefaForm({
         </FormField>
 
         <FormField label="Responsável">
-          <input value={assignedName} onChange={(e) => setAssignedName(e.target.value)} className={inputClass} placeholder="Nome do responsável" />
+          <UserSelect value={assignedName} onChange={setAssignedName} className={selectClass} placeholder="Selecione o responsável" />
         </FormField>
 
         <div className="grid grid-cols-2 gap-3">
