@@ -6,6 +6,16 @@ import { appPath } from "@/lib/app-path";
 type Member = { id: string; displayName: string };
 
 let cached: Member[] | null = null;
+let cachedAt = 0;
+const TTL = 30_000;
+
+function fetchMembers(cb: (m: Member[]) => void) {
+  if (cached && Date.now() - cachedAt < TTL) { cb(cached); return; }
+  fetch(appPath("/api/members"), { credentials: "include" })
+    .then((r) => r.json() as Promise<{ members: Member[] }>)
+    .then((d) => { cached = d.members; cachedAt = Date.now(); cb(d.members); })
+    .catch(() => {});
+}
 
 export default function UserSelect({
   value,
@@ -20,13 +30,7 @@ export default function UserSelect({
 }) {
   const [members, setMembers] = useState<Member[]>(cached ?? []);
 
-  useEffect(() => {
-    if (cached) return;
-    fetch(appPath("/api/members"), { credentials: "include" })
-      .then((r) => r.json() as Promise<{ members: Member[] }>)
-      .then((d) => { cached = d.members; setMembers(d.members); })
-      .catch(() => {});
-  }, []);
+  useEffect(() => { fetchMembers(setMembers); }, []);
 
   return (
     <select
@@ -44,12 +48,6 @@ export default function UserSelect({
 
 export function useMembers() {
   const [members, setMembers] = useState<Member[]>(cached ?? []);
-  useEffect(() => {
-    if (cached) { setMembers(cached); return; }
-    fetch(appPath("/api/members"), { credentials: "include" })
-      .then((r) => r.json() as Promise<{ members: Member[] }>)
-      .then((d) => { cached = d.members; setMembers(d.members); })
-      .catch(() => {});
-  }, []);
+  useEffect(() => { fetchMembers(setMembers); }, []);
   return members;
 }
