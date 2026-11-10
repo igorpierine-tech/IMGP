@@ -33,8 +33,12 @@ export async function PATCH(request: Request) {
     const [before] = await ctx.db.select().from(projectItems).where(eq(projectItems.id, id)).limit(1);
     if (!before) throw new HttpError(404, "Tarefa ou marco não encontrado.");
     const values = await validatedValues(body, before.projectId, ctx.db);
-    if (body.kind === undefined) values.kind = before.kind;
-    const [updated] = await ctx.db.update(projectItems).set({ ...values, updatedAt: new Date() }).where(eq(projectItems.id, id)).returning();
+    const patch: Record<string, unknown> = { updatedAt: new Date() };
+    for (const key of Object.keys(values) as (keyof typeof values)[]) {
+      if (body[key] !== undefined) patch[key] = values[key];
+    }
+    if (!("kind" in patch)) patch.kind = before.kind;
+    const [updated] = await ctx.db.update(projectItems).set(patch).where(eq(projectItems.id, id)).returning();
     await writeAudit({ actor: ctx.user, action: "project_item.updated", entityType: "project_item", entityId: id, requestId: request.headers.get("cf-ray"), before, after: updated, db: ctx.db });
     return Response.json({ item: updated });
   } catch (error) {
