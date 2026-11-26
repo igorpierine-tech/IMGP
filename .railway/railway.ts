@@ -8,7 +8,7 @@ export const partial = "RaizesERiquezas";
 export default defineRailway(() => {
   const data = volume("imgp-volume", { region: "ams", sizeMB: 5000 });
   const raizesERiquezas = service("Raízes e Riquezas", {
-    start: "sh -c 'umask 077; { printf \"AUTH_BOOTSTRAP_TOKEN=%s\\n\" \"$AUTH_BOOTSTRAP_TOKEN\"; printf \"AUTH_SESSION_SECRET=%s\\n\" \"$AUTH_SESSION_SECRET\"; printf \"BOOTSTRAP_ADMIN_EMAIL=%s\\n\" \"$BOOTSTRAP_ADMIN_EMAIL\"; printf \"DATA_BACKEND=%s\\n\" \"$DATA_BACKEND\"; printf \"ENTRA_REDIRECT_URI=%s\\n\" \"$ENTRA_REDIRECT_URI\"; } > .dev.vars; exec npm run start:railway'",
+    start: "sh -c 'umask 077; { printf \"AUTH_BOOTSTRAP_TOKEN=%s\\n\" \"$AUTH_BOOTSTRAP_TOKEN\"; printf \"AUTH_SESSION_SECRET=%s\\n\" \"$AUTH_SESSION_SECRET\"; printf \"BOOTSTRAP_ADMIN_EMAIL=%s\\n\" \"$BOOTSTRAP_ADMIN_EMAIL\"; printf \"DATA_BACKEND=%s\\n\" \"$DATA_BACKEND\"; printf \"ENTRA_REDIRECT_URI=%s\\n\" \"$ENTRA_REDIRECT_URI\"; printf \"JWT_SECRET=%s\\n\" \"$JWT_SECRET\"; } > .dev.vars; exec npm run start:railway'",
     healthcheck: "/Projetos/login",
     healthcheckTimeout: 300,
     build: {
@@ -21,6 +21,7 @@ export default defineRailway(() => {
       BOOTSTRAP_ADMIN_EMAIL: preserve(),
       DATA_BACKEND: preserve(),
       ENTRA_REDIRECT_URI: preserve(),
+      JWT_SECRET: preserve(),
     },
     volumeMounts: {
       "/data": data,
