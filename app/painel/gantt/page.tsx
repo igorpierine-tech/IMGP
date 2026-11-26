@@ -31,7 +31,9 @@ const STATUS_COLORS: Record<string, string> = { planned: "#93c5fd", in_progress:
 const MN = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const STATUS_LABELS: Record<string, string> = { planned: "Planejada", in_progress: "Em progresso", blocked: "Bloqueada", review: "Revisão", done: "Concluída" };
 const HEALTH_LABELS: Record<string, string> = { on_track: "No prazo", attention: "Atenção", late: "Atrasado" };
-const TASK_COL = 240;
+const TASK_COL_DEFAULT = 240;
+const TASK_COL_MIN = 120;
+const TASK_COL_MAX = 600;
 const ROW_H = 32;
 
 function daysBetween(a: Date, b: Date) { return Math.ceil((b.getTime() - a.getTime()) / 86400000); }
@@ -121,6 +123,8 @@ export default function GanttPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [scale, setScale] = useState<TimeScale>("mes");
+  const [taskColW, setTaskColW] = useState(TASK_COL_DEFAULT);
+  const taskColWRef = useRef(TASK_COL_DEFAULT);
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const dragOrigin = useRef({ x: 0, sl: 0 });
@@ -224,6 +228,39 @@ export default function GanttPage() {
     (e.currentTarget as HTMLElement).style.cursor = "";
   }
 
+  useEffect(() => { taskColWRef.current = taskColW; }, [taskColW]);
+
+  const resizeHandleRef = useRef<HTMLDivElement | null>(null);
+  const resizeCleanup = useRef<(() => void) | null>(null);
+  const setResizeHandle = (el: HTMLDivElement | null) => {
+    if (resizeCleanup.current) { resizeCleanup.current(); resizeCleanup.current = null; }
+    resizeHandleRef.current = el;
+    if (!el) return;
+    let startX = 0;
+    let startW = TASK_COL_DEFAULT;
+    function onMove(e: MouseEvent) {
+      setTaskColW(Math.max(TASK_COL_MIN, Math.min(TASK_COL_MAX, startW + (e.clientX - startX))));
+    }
+    function onUp() {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    }
+    function onDown(e: MouseEvent) {
+      e.preventDefault();
+      e.stopPropagation();
+      startX = e.clientX;
+      startW = taskColWRef.current;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    }
+    el.addEventListener("mousedown", onDown);
+    resizeCleanup.current = () => el.removeEventListener("mousedown", onDown);
+  };
+
   if (error) return <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">{error}</div>;
 
   return (
@@ -269,7 +306,7 @@ export default function GanttPage() {
         <div className="bg-white rounded-xl border border-gray-200/60 shadow-sm overflow-hidden">
           <div className="flex">
             {/* Fixed task column */}
-            <div className="shrink-0 border-r border-gray-200 bg-white z-10" style={{ width: TASK_COL }}>
+            <div className="shrink-0 border-r border-gray-200 bg-white z-10 relative" style={{ width: taskColW }}>
               {topH.length > 0 && <div className="border-b bg-gray-50" style={{ height: 28 }} />}
               <div className="border-b bg-gray-50 px-3 flex items-center text-xs font-medium text-gray-500" style={{ height: ROW_H }}>Tarefa</div>
               {displaySprints.map(s => (
@@ -287,6 +324,10 @@ export default function GanttPage() {
                   <span className="text-xs text-gray-700 truncate">{row.item.name}</span>
                 </div>
               ))}
+              {/* Resize handle */}
+              <div ref={setResizeHandle}
+                className="absolute top-0 bottom-0 w-1.5 right-0 cursor-col-resize hover:bg-[#0c4a3e]/20 active:bg-[#0c4a3e]/30 transition-colors z-20"
+                title="Arraste para redimensionar" />
             </div>
 
             {/* Scrollable timeline */}
