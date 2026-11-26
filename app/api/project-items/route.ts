@@ -99,6 +99,8 @@ async function validatedValues(body: Record<string, unknown>, fallbackProjectId:
     actualStart: clean(body.actualStart, 10) || null,
     actualEnd: clean(body.actualEnd, 10) || null,
     plannedHours: finiteNumber(body.plannedHours),
+    userStories: clean(body.userStories, 5000) || null,
+    details: clean(body.details, 5000) || null,
     rawJson: JSON.stringify({ priority: clean(body.priority, 30) || "Média" }),
   };
 }

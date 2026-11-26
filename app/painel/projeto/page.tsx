@@ -29,6 +29,7 @@ type Project = {
 type TaskItem = {
   id: number; name: string; kind: string; status: string; health: string;
   assignedName?: string; plannedStart?: string; plannedEnd?: string; plannedHours: number;
+  userStories?: string; details?: string;
   rawJson?: string; parentId?: number | null; sprintId?: number | null; projectId?: number;
 };
 

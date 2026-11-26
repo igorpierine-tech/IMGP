@@ -34,6 +34,8 @@ export default function NovaTarefaForm({
   const [plannedEnd, setPlannedEnd] = useState("");
   const [plannedHours, setPlannedHours] = useState("");
   const [priority, setPriority] = useState("Média");
+  const [userStories, setUserStories] = useState("");
+  const [details, setDetails] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -61,7 +63,8 @@ export default function NovaTarefaForm({
     setProjectId(defaultProjectId ? String(defaultProjectId) : "");
     setParentId(""); setSprintId("");
     setName(""); setKind("task"); setStatus("planned"); setAssignedName("");
-    setPlannedStart(""); setPlannedEnd(""); setPlannedHours(""); setPriority("Média"); setError("");
+    setPlannedStart(""); setPlannedEnd(""); setPlannedHours(""); setPriority("Média");
+    setUserStories(""); setDetails(""); setError("");
   }
 
   function handleClose() { reset(); onClose(); }
@@ -84,6 +87,8 @@ export default function NovaTarefaForm({
           plannedEnd: plannedEnd || undefined,
           plannedHours: plannedHours ? Number(plannedHours) : undefined,
           priority,
+          userStories: userStories || undefined,
+          details: details || undefined,
         }),
       });
       const body = await res.json() as { error?: string };
@@ -172,6 +177,14 @@ export default function NovaTarefaForm({
 
         <FormField label="Horas planejadas">
           <input type="number" min={0} value={plannedHours} onChange={(e) => setPlannedHours(e.target.value)} className={inputClass} />
+        </FormField>
+
+        <FormField label="User Stories">
+          <textarea value={userStories} onChange={(e) => setUserStories(e.target.value)} className={inputClass} rows={3} placeholder="Como [persona], quero [ação] para [benefício]" />
+        </FormField>
+
+        <FormField label="Detalhes">
+          <textarea value={details} onChange={(e) => setDetails(e.target.value)} className={inputClass} rows={3} placeholder="Informações adicionais sobre a tarefa" />
         </FormField>
 
         <FormActions onCancel={handleClose} loading={loading} />

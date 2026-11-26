@@ -8,6 +8,7 @@ import UserSelect from "./user-select";
 type Task = {
   id: number; name: string; kind: string; status: string; health: string;
   assignedName?: string; plannedStart?: string; plannedEnd?: string; plannedHours: number;
+  userStories?: string; details?: string;
   rawJson?: string; parentId?: number | null; sprintId?: number | null; projectId?: number;
 };
 type EpicOption = { id: number; name: string };
@@ -28,6 +29,8 @@ export default function EditTarefaForm({ task, onClose, onSaved }: { task: Task;
   const [assignedName, setAssignedName] = useState(task.assignedName ?? "");
   const [plannedEnd, setPlannedEnd] = useState(task.plannedEnd ?? "");
   const [plannedHours, setPlannedHours] = useState(task.plannedHours);
+  const [userStories, setUserStories] = useState(task.userStories ?? "");
+  const [details, setDetails] = useState(task.details ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -53,7 +56,7 @@ export default function EditTarefaForm({ task, onClose, onSaved }: { task: Task;
       const r = await fetch(appPath("/api/project-items"), {
         method: "PATCH", credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: task.id, kind: task.kind, name: name.trim(), status, parentId: parentId ? Number(parentId) : null, sprintId: sprintId ? Number(sprintId) : null, assignedName: assignedName.trim() || null, plannedEnd: plannedEnd || null, plannedHours, priority: pri }),
+        body: JSON.stringify({ id: task.id, kind: task.kind, name: name.trim(), status, parentId: parentId ? Number(parentId) : null, sprintId: sprintId ? Number(sprintId) : null, assignedName: assignedName.trim() || null, plannedEnd: plannedEnd || null, plannedHours, priority: pri, userStories: userStories.trim() || null, details: details.trim() || null }),
       });
       if (!r.ok) { const b = await r.json() as { error?: string }; throw new Error(b.error ?? "Erro"); }
       onSaved();
@@ -98,6 +101,8 @@ export default function EditTarefaForm({ task, onClose, onSaved }: { task: Task;
           <FormField label="Prazo"><input type="date" value={plannedEnd} onChange={(e) => setPlannedEnd(e.target.value)} className={inputClass} /></FormField>
           <FormField label="Horas planejadas"><input type="number" min={0} value={plannedHours} onChange={(e) => setPlannedHours(Number(e.target.value))} className={inputClass} /></FormField>
         </div>
+        <FormField label="User Stories"><textarea value={userStories} onChange={(e) => setUserStories(e.target.value)} className={inputClass} rows={3} placeholder="Como [persona], quero [ação] para [benefício]" /></FormField>
+        <FormField label="Detalhes"><textarea value={details} onChange={(e) => setDetails(e.target.value)} className={inputClass} rows={3} placeholder="Informações adicionais sobre a tarefa" /></FormField>
         <FormActions onClose={onClose} saving={saving} label="Salvar" />
       </form>
     </FormDialog>

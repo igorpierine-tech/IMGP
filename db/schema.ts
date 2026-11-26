@@ -138,6 +138,8 @@ export const projectItems = sqliteTable("project_items", {
   actualStart: text("actual_start"),
   actualEnd: text("actual_end"),
   plannedHours: real("planned_hours").notNull().default(0),
+  userStories: text("user_stories"),
+  details: text("details"),
   rawJson: text("raw_json"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(now),
