@@ -13,4 +13,6 @@ node_modules/
 supabase/.temp/
 site-*.tar.gz
 *.tsbuildinfo
+.claude/
+.vinext/
 
