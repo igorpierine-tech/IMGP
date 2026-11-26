@@ -49,6 +49,11 @@ export async function GET(request: Request) {
       actualEnd: item.actualEnd,
       parentId: item.parentId,
       sprintId: item.sprintId,
+      plannedHours: item.plannedHours,
+      rawJson: item.rawJson,
+      userStories: item.userStories,
+      details: item.details,
+      projectId: item.projectId,
       dependencies: relevantDeps
         .filter(d => d.successorId === item.id)
         .map(d => ({ predecessorId: d.predecessorId, type: d.type, lagDays: d.lagDays })),

@@ -4,12 +4,14 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { appPath } from "@/lib/app-path";
 import { Loader2, GanttChart, CalendarDays, Layers } from "lucide-react";
 import Breadcrumbs from "../components/breadcrumbs";
+import EditTarefaForm from "../components/edit-tarefa-form";
 import { useToast } from "../components/toast";
 
 type GanttItem = {
   id: number; name: string; kind: string; status: string; health: string;
   assignedName: string | null; plannedStart: string | null; plannedEnd: string | null;
   actualStart: string | null; actualEnd: string | null; parentId: number | null; sprintId: number | null;
+  plannedHours: number; rawJson?: string; userStories?: string; details?: string; projectId?: number;
   dependencies: Array<{ predecessorId: number; type: string; lagDays: number }>;
 };
 type ProjectOption = { id: number; name: string };
@@ -123,6 +125,7 @@ export default function GanttPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [scale, setScale] = useState<TimeScale>("mes");
+  const [editingTask, setEditingTask] = useState<GanttItem | null>(null);
   const [taskColW, setTaskColW] = useState(TASK_COL_DEFAULT);
   const taskColWRef = useRef(TASK_COL_DEFAULT);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -136,14 +139,16 @@ export default function GanttPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
+  function reloadItems() {
     if (!selectedProject) return;
     setLoading(true);
     fetch(appPath(`/api/gantt?projectId=${selectedProject}`), { credentials: "include" })
       .then(async r => { const b = await r.json() as any; if (!r.ok) throw new Error(b.error ?? "Erro"); setItems(b.items ?? []); setSprints(b.sprints ?? []); })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
-  }, [selectedProject]);
+  }
+
+  useEffect(() => { reloadItems(); }, [selectedProject]);
 
   const cfg = SCALES.find(s => s.key === scale)!;
 
@@ -319,7 +324,8 @@ export default function GanttPage() {
                   <span className="text-[10px] text-gray-400 shrink-0">({row.taskCount})</span>
                 </div>
               ) : (
-                <div key={`tl${row.item.id}`} className="border-b border-gray-50 pl-7 pr-3 flex items-center gap-1.5 hover:bg-gray-50/50" style={{ height: ROW_H }}>
+                <div key={`tl${row.item.id}`} className="border-b border-gray-50 pl-7 pr-3 flex items-center gap-1.5 hover:bg-gray-50/50 cursor-pointer" style={{ height: ROW_H }}
+                  onDoubleClick={() => setEditingTask(row.item)}>
                   <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: HEALTH_COLORS[row.item.health] ?? "#94a3b8" }} />
                   <span className="text-xs text-gray-700 truncate">{row.item.name}</span>
                 </div>
@@ -392,9 +398,10 @@ export default function GanttPage() {
                   const barColor = STATUS_COLORS[it.status] ?? "#94a3b8";
                   return (
                     <div key={`tb${it.id}`} className="relative border-b border-gray-50 hover:bg-gray-50/50 group" style={{ height: ROW_H }}>
-                      <div className="absolute top-1.5 h-5 rounded shadow-sm flex items-center px-1.5 text-[10px] text-white font-medium truncate cursor-default group-hover:shadow-md transition-shadow"
+                      <div className="absolute top-1.5 h-5 rounded shadow-sm flex items-center px-1.5 text-[10px] text-white font-medium truncate cursor-pointer group-hover:shadow-md transition-shadow"
                         style={{ left, width, backgroundColor: barColor }}
-                        title={`${it.name}\n${it.assignedName ?? "Sem responsável"}\n${STATUS_LABELS[it.status] ?? it.status}`}>
+                        title={`${it.name}\n${it.assignedName ?? "Sem responsável"}\n${STATUS_LABELS[it.status] ?? it.status}`}
+                        onDoubleClick={(e) => { e.stopPropagation(); setEditingTask(it); }}>
                         {width > 60 ? it.name : ""}
                       </div>
                       {it.actualStart && it.actualEnd && (
@@ -425,6 +432,14 @@ export default function GanttPage() {
             <span className="ml-2 flex items-center gap-1"><span className="w-px h-3 bg-red-400/70" /> Hoje</span>
           </div>
         </div>
+      )}
+
+      {editingTask && (
+        <EditTarefaForm
+          task={editingTask}
+          onClose={() => setEditingTask(null)}
+          onSaved={() => { setEditingTask(null); reloadItems(); }}
+        />
       )}
     </div>
   );
